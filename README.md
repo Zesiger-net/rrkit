@@ -20,7 +20,7 @@ rrkit is **one Docker container**. The only thing it keeps on your host is **a s
 
 ```bash
 # 1. Grab the compose file
-curl -O https://raw.githubusercontent.com/<you>/rrkit/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/Zesiger-Net/rrkit/main/docker-compose.yml
 
 # 2. Start it
 docker compose up -d
@@ -36,9 +36,6 @@ On first launch a short setup wizard guides you through:
 3. **Session metadata**: the custom fields your app will attach to sessions (e.g. `user_id`, `user_email`, `plan`).
 
 That's it. The app is live.
-
-> Don't have a bucket handy? Use the dev stack with a bundled MinIO:
-> `docker compose -f docker-compose.dev.yml up --build`. See the file for the credentials to paste into the wizard.
 
 ---
 
