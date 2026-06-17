@@ -3,14 +3,20 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
-import { LogOut, MonitorPlay, Settings as SettingsIcon } from 'lucide-react';
+import { AlertTriangle, LogOut, MonitorPlay, Settings as SettingsIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { useStatus } from '@/lib/queries';
 import { FullScreenLoader } from './loader';
 import { Logo } from './logo';
 
-export function AppShell({ active, children }: { active: 'sessions' | 'settings'; children: ReactNode }) {
+export function AppShell({
+  active,
+  children,
+}: {
+  active: 'sessions' | 'issues' | 'settings';
+  children: ReactNode;
+}) {
   const router = useRouter();
   const { data, isLoading } = useStatus();
 
@@ -31,6 +37,7 @@ export function AppShell({ active, children }: { active: 'sessions' | 'settings'
 
   const nav = [
     { key: 'sessions', label: 'Sessions', href: '/sessions', icon: MonitorPlay },
+    { key: 'issues', label: 'Issues', href: '/issues', icon: AlertTriangle },
     { key: 'settings', label: 'Settings', href: '/settings', icon: SettingsIcon },
   ];
 

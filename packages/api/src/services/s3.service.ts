@@ -1,13 +1,28 @@
 import { randomUUID } from 'node:crypto';
 import {
   DeleteObjectsCommand,
+  GetBucketLifecycleConfigurationCommand,
   GetObjectCommand,
   HeadBucketCommand,
   ListObjectsV2Command,
+  PutBucketLifecycleConfigurationCommand,
   PutObjectCommand,
   S3Client,
+  type LifecycleRule,
 } from '@aws-sdk/client-s3';
 import type { S3Config, S3TestResult } from '@rrkit/shared';
+
+/** rrweb-owned lifecycle rule id, so we never clobber the user's own rules. */
+const RETENTION_RULE_ID = 'rrkit-retention';
+
+export interface LifecycleStatus {
+  /** Whether the bucket/provider lets rrkit read & write a lifecycle rule. */
+  supported: boolean;
+  /** Expiry days currently set by rrkit's rule, or null if absent. */
+  days: number | null;
+  /** Populated when supported === false. */
+  error?: string;
+}
 
 /* ---- S3 key builders ---- */
 export const s3keys = {
@@ -115,6 +130,59 @@ export class S3Service {
           Delete: { Objects: batch.map((o) => ({ Key: o.key })) },
         }),
       );
+    }
+  }
+
+  /* ---- bucket lifecycle (retention) ---- */
+
+  private async readLifecycleRules(): Promise<LifecycleRule[]> {
+    const { client, bucket } = this.require();
+    try {
+      const res = await client.send(
+        new GetBucketLifecycleConfigurationCommand({ Bucket: bucket }),
+      );
+      return res.Rules ?? [];
+    } catch (err) {
+      // No lifecycle config yet is not an error — return an empty rule set.
+      const code = (err as { name?: string; Code?: string }).name ?? (err as { Code?: string }).Code;
+      if (code === 'NoSuchLifecycleConfiguration') return [];
+      throw err;
+    }
+  }
+
+  /**
+   * Add/update an rrkit-owned whole-bucket expiry rule of `days`, preserving
+   * any other lifecycle rules the user has configured. Best-effort: throws if
+   * the bucket/credentials don't allow lifecycle management.
+   */
+  async syncRetentionLifecycle(days: number): Promise<void> {
+    if (!this.isConfigured()) return;
+    const { client, bucket } = this.require();
+    const existing = (await this.readLifecycleRules()).filter((r) => r.ID !== RETENTION_RULE_ID);
+    const rule: LifecycleRule = {
+      ID: RETENTION_RULE_ID,
+      Status: 'Enabled',
+      Filter: { Prefix: '' },
+      Expiration: { Days: days },
+    };
+    await client.send(
+      new PutBucketLifecycleConfigurationCommand({
+        Bucket: bucket,
+        LifecycleConfiguration: { Rules: [...existing, rule] },
+      }),
+    );
+  }
+
+  /** Report whether rrkit's retention rule is present (for the dashboard). */
+  async getLifecycleStatus(): Promise<LifecycleStatus> {
+    if (!this.isConfigured()) return { supported: false, days: null, error: 'S3 is not configured.' };
+    try {
+      const rules = await this.readLifecycleRules();
+      const ours = rules.find((r) => r.ID === RETENTION_RULE_ID);
+      return { supported: true, days: ours?.Expiration?.Days ?? null };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { supported: false, days: null, error: message };
     }
   }
 

@@ -1,17 +1,19 @@
-import {
-  DEFAULT_FLUSH_THRESHOLD_BYTES,
-  DEFAULT_UPLOAD_INTERVAL_MS,
-} from '@rrkit/shared/constants';
 import type { MetadataValue } from '@rrkit/shared';
 import { fetchConfig } from './core/config';
+import { compileMatchers, matchesAny } from './core/redact';
 import { emitCustomEvent, startRecording, stopRecording } from './core/recorder';
 import { clearSid, createSession, getStoredSid, storeSid } from './core/session';
 import { Uploader } from './core/uploader';
 import { installConsole } from './interceptors/console';
+import { installDeadClick } from './interceptors/deadclick';
 import { installErrors } from './interceptors/errors';
 import { installNetwork } from './interceptors/network';
 import { installRage } from './interceptors/rage';
+import { installVitals } from './interceptors/vitals';
 import type { Metadata, RrkitConfig } from './types';
+
+const CONSENT_KEY = 'rrkit_consent';
+const SAMPLE_KEY = 'rrkit_sample';
 
 class Rrkit {
   private config: RrkitConfig | null = null;
@@ -41,7 +43,17 @@ class Rrkit {
         return;
       }
 
-      const maskAllInputs = cfg.maskAllInputs ?? server.privacy.maskInputs;
+      // ---- consent / privacy / sampling gates ----
+      if (dntBlocked(server.privacy.respectDnt)) return;
+      if (server.privacy.requireConsent && !consentGranted()) return; // resumes via optIn()
+      if (urlRuleBlocked(server.sampling.urlAllowlist, server.sampling.urlBlocklist)) return;
+      if (sampledOut(server.sampling.sessionSampleRate)) return;
+
+      const privacy = {
+        ...server.privacy,
+        maskInputs: cfg.maskAllInputs ?? server.privacy.maskInputs,
+      };
+
       const sessionId = await this.ensureSession(cfg.host);
       if (!sessionId) {
         warn('could not start a session — not recording');
@@ -52,26 +64,40 @@ class Rrkit {
       this.uploader = new Uploader({
         host: cfg.host,
         key: cfg.key,
-        intervalMs: cfg.uploadIntervalMs ?? server.uploadIntervalMs ?? DEFAULT_UPLOAD_INTERVAL_MS,
-        thresholdBytes:
-          cfg.flushThresholdBytes ?? server.flushThresholdBytes ?? DEFAULT_FLUSH_THRESHOLD_BYTES,
+        intervalMs: cfg.uploadIntervalMs ?? server.upload.uploadIntervalMs,
+        thresholdBytes: cfg.flushThresholdBytes ?? server.upload.flushThresholdBytes,
         getSessionId: () => this.sessionId,
         onInvalidSession: () => void this.restart(),
       });
       this.uploader.start();
 
       startRecording({
-        maskAllInputs,
-        recordCanvas: server.features.canvas,
+        privacy,
+        canvasEnabled: server.features.canvas,
+        canvas: server.canvas,
+        volume: server.volume,
+        dom: server.dom,
         emit: (event) => this.uploader?.enqueue(event),
       });
 
-      if (server.features.console) this.teardownFns.push(installConsole());
-      if (server.features.network) this.teardownFns.push(installNetwork());
-      if (server.features.errors) {
-        this.teardownFns.push(installErrors());
-        this.teardownFns.push(installRage());
+      if (server.features.console) this.teardownFns.push(installConsole(server.console));
+      if (server.features.network) this.teardownFns.push(installNetwork(server.network));
+      if (server.features.errors) this.teardownFns.push(installErrors());
+      if (server.features.rage) {
+        this.teardownFns.push(
+          installRage({
+            threshold: server.frustration.rageThreshold,
+            windowMs: server.frustration.rageWindowMs,
+            radiusPx: server.frustration.rageRadiusPx,
+          }),
+        );
       }
+      if (server.features.deadClick) {
+        this.teardownFns.push(
+          installDeadClick({ windowMs: server.frustration.deadClickWindowMs }),
+        );
+      }
+      if (server.features.webVitals) this.teardownFns.push(installVitals());
 
       this.attachUnload();
       this.active = true;
@@ -88,6 +114,27 @@ class Rrkit {
   setMetadata(fields: Record<string, MetadataValue>): void {
     Object.assign(this.metadata, fields);
     this.uploader?.setMetadata(fields);
+  }
+
+  /** Grant consent and (re)start recording. Persists across page loads. */
+  optIn(): void {
+    try {
+      localStorage.setItem(CONSENT_KEY, '1');
+    } catch {
+      /* ignore */
+    }
+    void this.start();
+  }
+
+  /** Revoke consent: stop recording and forget the current session. */
+  optOut(): void {
+    try {
+      localStorage.removeItem(CONSENT_KEY);
+    } catch {
+      /* ignore */
+    }
+    this.stop();
+    clearSid();
   }
 
   stop(): void {
@@ -163,6 +210,51 @@ class Rrkit {
     const routes = this.config?.excludeRoutes ?? [];
     const path = location.pathname;
     return routes.some((r) => (typeof r === 'string' ? path.includes(r) : r.test(path)));
+  }
+}
+
+/* ---- module-level gate helpers ---- */
+
+function consentGranted(): boolean {
+  try {
+    return localStorage.getItem(CONSENT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function dntBlocked(respect: boolean): boolean {
+  if (!respect) return false;
+  const nav = navigator as Navigator & {
+    msDoNotTrack?: string;
+    globalPrivacyControl?: boolean;
+  };
+  const dnt = nav.doNotTrack ?? (window as unknown as { doNotTrack?: string }).doNotTrack ?? nav.msDoNotTrack;
+  return dnt === '1' || dnt === 'yes' || nav.globalPrivacyControl === true;
+}
+
+/** True if the current path is excluded by the server-side URL rules. */
+function urlRuleBlocked(allowlist: string[], blocklist: string[]): boolean {
+  const path = location.pathname + location.search;
+  if (matchesAny(path, compileMatchers(blocklist))) return true;
+  const allow = compileMatchers(allowlist);
+  if (allow.length > 0 && !matchesAny(path, allow)) return true;
+  return false;
+}
+
+/** Per-session sampling decision, stable within a tab session. */
+function sampledOut(rate: number): boolean {
+  if (rate >= 1) return false;
+  if (getStoredSid()) return false; // an existing session always continues
+  try {
+    const marker = sessionStorage.getItem(SAMPLE_KEY);
+    if (marker === 'out') return true;
+    if (marker === 'in') return false;
+    const decision = Math.random() < rate ? 'in' : 'out';
+    sessionStorage.setItem(SAMPLE_KEY, decision);
+    return decision === 'out';
+  } catch {
+    return Math.random() >= rate;
   }
 }
 

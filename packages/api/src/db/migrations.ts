@@ -52,4 +52,34 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX idx_sessions_device  ON sessions (ua_device);
     `,
   },
+  {
+    version: 2,
+    sql: /* sql */ `
+      -- Triage fields on sessions.
+      ALTER TABLE sessions ADD COLUMN starred INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE sessions ADD COLUMN note    TEXT;
+
+      -- Cross-session signal index (errors / rage / dead clicks) extracted on ingest.
+      CREATE TABLE session_signals (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id  TEXT NOT NULL,
+        kind        TEXT NOT NULL,           -- 'error' | 'rage' | 'deadclick'
+        fingerprint TEXT,                    -- errors only
+        message     TEXT,
+        ts          INTEGER NOT NULL,        -- event timestamp (ms)
+        created     TEXT NOT NULL
+      );
+      CREATE INDEX idx_signals_kind    ON session_signals (kind);
+      CREATE INDEX idx_signals_fp      ON session_signals (fingerprint);
+      CREATE INDEX idx_signals_session ON session_signals (session_id);
+      CREATE INDEX idx_signals_created ON session_signals (created);
+
+      -- Per-issue alert de-duplication state.
+      CREATE TABLE alert_state (
+        fingerprint   TEXT PRIMARY KEY,
+        last_notified TEXT NOT NULL,
+        last_count    INTEGER NOT NULL DEFAULT 0
+      );
+    `,
+  },
 ];

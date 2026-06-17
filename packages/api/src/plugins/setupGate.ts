@@ -15,6 +15,7 @@ export async function setupGate(req: FastifyRequest, reply: FastifyReply): Promi
   if (
     url.startsWith('/api/setup') ||
     url === '/api/health' ||
+    url === '/api/metrics' ||
     url.startsWith('/api/status')
   ) {
     return;

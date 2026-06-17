@@ -6,10 +6,35 @@ import {
   PrivacySchema,
   RetentionSchema,
   S3ConfigSchema,
+  CanvasSettingsSchema,
+  FrustrationSettingsSchema,
+  VolumeSettingsSchema,
+  DomSettingsSchema,
+  ConsoleSettingsSchema,
+  UploadSettingsSchema,
+  NetworkSettingsSchema,
+  SamplingSettingsSchema,
+  SessionPolicySchema,
+  AlertsSettingsSchema,
+  SecuritySettingsSchema,
   type Features,
   type Privacy,
+  type CanvasSettings,
+  type FrustrationSettings,
+  type VolumeSettings,
+  type DomSettings,
+  type ConsoleSettings,
+  type UploadSettings,
+  type NetworkSettings,
+  type SamplingSettings,
 } from './settings.js';
-import type { MetadataField, SessionRecord, ChunkInfo } from './sessions.js';
+import type {
+  MetadataField,
+  SessionRecord,
+  ChunkInfo,
+  IssueRecord,
+  FrustrationSummary,
+} from './sessions.js';
 
 /* ------------------------------------------------------------------ *
  * Setup + auth request bodies (validated server-side)
@@ -41,10 +66,26 @@ export const ChangePasswordSchema = z.object({
 export const UpdateFeaturesSchema = FeaturesSchema;
 export const UpdatePrivacySchema = PrivacySchema;
 export const UpdateRetentionSchema = RetentionSchema;
+
+/**
+ * Capture-settings update. Every group is optional so the dashboard can save
+ * one section at a time; the route persists only the groups it receives.
+ */
 export const UpdateCaptureSchema = z.object({
-  features: FeaturesSchema,
-  privacy: PrivacySchema,
-  retention: RetentionSchema,
+  features: FeaturesSchema.optional(),
+  privacy: PrivacySchema.optional(),
+  retention: RetentionSchema.optional(),
+  canvas: CanvasSettingsSchema.optional(),
+  frustration: FrustrationSettingsSchema.optional(),
+  volume: VolumeSettingsSchema.optional(),
+  dom: DomSettingsSchema.optional(),
+  console: ConsoleSettingsSchema.optional(),
+  upload: UploadSettingsSchema.optional(),
+  network: NetworkSettingsSchema.optional(),
+  sampling: SamplingSettingsSchema.optional(),
+  sessionPolicy: SessionPolicySchema.optional(),
+  alerts: AlertsSettingsSchema.optional(),
+  security: SecuritySettingsSchema.optional(),
 });
 
 /* ------------------------------------------------------------------ *
@@ -75,6 +116,22 @@ export const IngestEndSchema = z.object({
 });
 
 /* ------------------------------------------------------------------ *
+ * Session admin actions
+ * ------------------------------------------------------------------ */
+
+/** Right-to-erasure: delete every session whose metadata key=value matches. */
+export const EraseByMetadataSchema = z.object({
+  key: z.string().trim().min(1).max(40),
+  value: z.string().trim().min(1).max(400),
+});
+
+/** Patch a session's triage fields. */
+export const UpdateSessionSchema = z.object({
+  starred: z.boolean().optional(),
+  note: z.string().max(5000).optional(),
+});
+
+/* ------------------------------------------------------------------ *
  * Response shapes (typed for the dashboard + tracker)
  * ------------------------------------------------------------------ */
 
@@ -100,9 +157,19 @@ export interface S3TestResult {
 export interface TrackerConfigResponse {
   features: Features;
   privacy: Privacy;
+  canvas: CanvasSettings;
+  frustration: FrustrationSettings;
+  volume: VolumeSettings;
+  dom: DomSettings;
+  console: ConsoleSettings;
+  upload: UploadSettings;
+  network: NetworkSettings;
+  sampling: SamplingSettings;
   metadataKeys: string[];
   maxBatchBytes: number;
+  /** @deprecated use `upload.uploadIntervalMs` — kept for older trackers. */
   uploadIntervalMs: number;
+  /** @deprecated use `upload.flushThresholdBytes` — kept for older trackers. */
   flushThresholdBytes: number;
 }
 
@@ -143,4 +210,21 @@ export interface IntegrationResponse {
 
 export interface MetadataFieldsResponse {
   fields: MetadataField[];
+}
+
+export interface IssuesResponse {
+  items: IssueRecord[];
+}
+
+export type FrustrationResponse = FrustrationSummary;
+
+export interface EraseResponse {
+  deleted: number;
+}
+
+/** Bucket lifecycle status surfaced in the Storage settings tab. */
+export interface LifecycleStatusResponse {
+  supported: boolean;
+  days: number | null;
+  error?: string;
 }

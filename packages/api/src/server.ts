@@ -14,6 +14,7 @@ import { authRoutes } from './routes/auth';
 import { configRoutes } from './routes/config';
 import { healthRoutes } from './routes/health';
 import { ingestRoutes } from './routes/ingest';
+import { metricsRoutes } from './routes/metrics';
 import { sessionRoutes } from './routes/sessions';
 import { settingsRoutes } from './routes/settings';
 import { setupRoutes } from './routes/setup';
@@ -41,7 +42,7 @@ export async function buildApp(opts: BuildOptions): Promise<FastifyInstance> {
   await app.register(cors, {
     origin: true,
     credentials: false,
-    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['content-type', INGEST_KEY_HEADER],
   });
 
@@ -53,6 +54,7 @@ export async function buildApp(opts: BuildOptions): Promise<FastifyInstance> {
   await app.register(
     async (api) => {
       await healthRoutes(api, ctx);
+      await metricsRoutes(api, ctx);
       await statusRoutes(api, ctx);
       await setupRoutes(api, ctx);
       await authRoutes(api, ctx);

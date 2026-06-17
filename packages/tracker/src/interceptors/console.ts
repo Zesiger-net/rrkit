@@ -1,31 +1,39 @@
 import { CUSTOM_EVENT_TAGS } from '@rrkit/shared/constants';
-import type { ConsoleEventPayload } from '@rrkit/shared';
+import type { ConsoleEventPayload, ConsoleLevel } from '@rrkit/shared';
 import { emitCustomEvent } from '../core/recorder';
 
-const LEVELS: ConsoleEventPayload['level'][] = ['log', 'info', 'warn', 'error', 'debug'];
-const MAX_ARG_LEN = 2000;
+export interface ConsoleOptions {
+  levels: ConsoleLevel[];
+  maxArgLength: number;
+  captureStack: boolean;
+}
 
-function stringifyArg(arg: unknown): string {
-  if (typeof arg === 'string') return arg.slice(0, MAX_ARG_LEN);
+function stringifyArg(arg: unknown, max: number): string {
+  if (typeof arg === 'string') return arg.slice(0, max);
   try {
-    return JSON.stringify(arg)?.slice(0, MAX_ARG_LEN) ?? String(arg);
+    return JSON.stringify(arg)?.slice(0, max) ?? String(arg);
   } catch {
-    return String(arg).slice(0, MAX_ARG_LEN);
+    return String(arg).slice(0, max);
   }
 }
 
-export function installConsole(): () => void {
-  const original: Partial<Record<ConsoleEventPayload['level'], (...args: unknown[]) => void>> = {};
+export function installConsole(opts: ConsoleOptions): () => void {
+  const original: Partial<Record<ConsoleLevel, (...args: unknown[]) => void>> = {};
 
-  for (const level of LEVELS) {
+  for (const level of opts.levels) {
     const fn = console[level] as ((...args: unknown[]) => void) | undefined;
     if (!fn) continue;
     original[level] = fn.bind(console);
     console[level] = (...args: unknown[]) => {
       try {
+        const serialized = args.map((a) => stringifyArg(a, opts.maxArgLength));
+        if (opts.captureStack && (level === 'error' || level === 'warn')) {
+          const stack = new Error().stack;
+          if (stack) serialized.push(stack.split('\n').slice(2).join('\n').slice(0, opts.maxArgLength));
+        }
         emitCustomEvent(CUSTOM_EVENT_TAGS.console, {
           level,
-          args: args.map(stringifyArg),
+          args: serialized,
         } satisfies ConsoleEventPayload);
       } catch {
         /* never break the page's console */
@@ -35,7 +43,7 @@ export function installConsole(): () => void {
   }
 
   return () => {
-    for (const level of LEVELS) {
+    for (const level of opts.levels) {
       const orig = original[level];
       if (orig) console[level] = orig;
     }

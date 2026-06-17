@@ -1,10 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import {
-  DEFAULT_FLUSH_THRESHOLD_BYTES,
-  DEFAULT_UPLOAD_INTERVAL_MS,
-  MAX_BATCH_BYTES,
-  type TrackerConfigResponse,
-} from '@rrkit/shared';
+import { MAX_BATCH_BYTES, type TrackerConfigResponse } from '@rrkit/shared';
 import type { AppContext } from '../context';
 import { metadataFieldsRepo } from '../db/metadataFields.repo';
 import { settingsRepo } from '../db/settings.repo';
@@ -14,13 +9,25 @@ export async function configRoutes(app: FastifyInstance, _ctx: AppContext): Prom
   app.get(
     '/config',
     { preHandler: app.requireIngestKey },
-    async (): Promise<TrackerConfigResponse> => ({
-      features: settingsRepo.getFeatures(),
-      privacy: settingsRepo.getPrivacy(),
-      metadataKeys: metadataFieldsRepo.keys(),
-      maxBatchBytes: MAX_BATCH_BYTES,
-      uploadIntervalMs: DEFAULT_UPLOAD_INTERVAL_MS,
-      flushThresholdBytes: DEFAULT_FLUSH_THRESHOLD_BYTES,
-    }),
+    async (): Promise<TrackerConfigResponse> => {
+      const upload = settingsRepo.getUpload();
+      return {
+        features: settingsRepo.getFeatures(),
+        privacy: settingsRepo.getPrivacy(),
+        canvas: settingsRepo.getCanvas(),
+        frustration: settingsRepo.getFrustration(),
+        volume: settingsRepo.getVolume(),
+        dom: settingsRepo.getDom(),
+        console: settingsRepo.getConsole(),
+        upload,
+        network: settingsRepo.getNetwork(),
+        sampling: settingsRepo.getSampling(),
+        metadataKeys: metadataFieldsRepo.keys(),
+        maxBatchBytes: MAX_BATCH_BYTES,
+        // Back-compat mirror for trackers built before the `upload` group existed.
+        uploadIntervalMs: upload.uploadIntervalMs,
+        flushThresholdBytes: upload.flushThresholdBytes,
+      };
+    },
   );
 }

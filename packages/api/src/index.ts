@@ -36,6 +36,13 @@ async function main(): Promise<void> {
   );
 
   startJobs({ env, s3 }, app.log);
+
+  // Keep the bucket's lifecycle expiry rule aligned with the retention setting.
+  if (s3.isConfigured() && settingsRepo.getSetup().complete) {
+    void s3
+      .syncRetentionLifecycle(settingsRepo.getRetention().days)
+      .catch((err) => app.log.warn({ err }, 'could not sync S3 retention lifecycle on boot'));
+  }
 }
 
 main().catch((err) => {

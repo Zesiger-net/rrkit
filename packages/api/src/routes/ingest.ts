@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import {
   IngestEndSchema,
   IngestEventsSchema,
@@ -9,9 +9,14 @@ import {
 import type { AppContext } from '../context';
 import { metadataFieldsRepo } from '../db/metadataFields.repo';
 import { sessionsRepo } from '../db/sessions.repo';
+import { signalsRepo } from '../db/signals.repo';
+import { settingsRepo } from '../db/settings.repo';
+import { extractSignals } from '../util/signals';
 import { s3keys } from '../services/s3.service';
 import { finalizeSession } from '../services/sessionService';
 import { generateSessionId } from '../util/ids';
+import { applyIpPrivacy } from '../util/ip';
+import { originAllowed, RateLimiter } from '../util/ingestGuard';
 import { parseUA } from '../util/ua';
 import { validate } from '../util/validate';
 
@@ -29,7 +34,20 @@ function allowedMetadata(bag: MetadataBag | undefined): MetadataBag | null {
 }
 
 export async function ingestRoutes(app: FastifyInstance, ctx: AppContext): Promise<void> {
-  app.post('/ingest/start', { preHandler: app.requireIngestKey }, async (req, reply) => {
+  const limiter = new RateLimiter();
+
+  /** Origin allowlist + per-IP rate limit, both driven by the security settings. */
+  const ingestGuard = async (req: FastifyRequest, reply: FastifyReply) => {
+    const sec = settingsRepo.getSecurity();
+    if (!originAllowed(req.headers.origin, sec.allowedOrigins)) {
+      return reply.code(403).send({ error: 'Origin not allowed' });
+    }
+    if (!limiter.allow(req.ip, sec.ingestRatePerMin)) {
+      return reply.code(429).send({ error: 'Too many requests' });
+    }
+  };
+
+  app.post('/ingest/start', { preHandler: [app.requireIngestKey, ingestGuard] }, async (req, reply) => {
     const v = validate(IngestStartSchema, req.body);
     if (!v.ok) return reply.code(400).send({ error: v.message });
 
@@ -40,7 +58,7 @@ export async function ingestRoutes(app: FastifyInstance, ctx: AppContext): Promi
     sessionsRepo.create({
       id,
       ingestKey: req.ingestKey ?? null,
-      ip: clientIp(req),
+      ip: applyIpPrivacy(clientIp(req), settingsRepo.getPrivacy()),
       uaBrowser: ua.browser,
       uaOs: ua.os,
       uaDevice: ua.device,
@@ -71,7 +89,7 @@ export async function ingestRoutes(app: FastifyInstance, ctx: AppContext): Promi
     return { sessionId: id } satisfies IngestStartResponse;
   });
 
-  app.post('/ingest/events', { preHandler: app.requireIngestKey }, async (req, reply) => {
+  app.post('/ingest/events', { preHandler: [app.requireIngestKey, ingestGuard] }, async (req, reply) => {
     const v = validate(IngestEventsSchema, req.body);
     if (!v.ok) return reply.code(400).send({ error: v.message });
 
@@ -94,10 +112,17 @@ export async function ingestRoutes(app: FastifyInstance, ctx: AppContext): Promi
     const delta = allowedMetadata(v.data.metadataDelta);
     if (delta) sessionsRepo.mergeMetadata(v.data.sessionId, delta);
 
+    // Index errors / rage / dead clicks for cross-session issues + frustration.
+    try {
+      signalsRepo.insertMany(v.data.sessionId, extractSignals(v.data.events));
+    } catch (err) {
+      req.log.warn({ err }, 'failed to index session signals');
+    }
+
     return { ok: true };
   });
 
-  app.post('/ingest/end', { preHandler: app.requireIngestKey }, async (req, reply) => {
+  app.post('/ingest/end', { preHandler: [app.requireIngestKey, ingestGuard] }, async (req, reply) => {
     const v = validate(IngestEndSchema, req.body);
     if (!v.ok) return reply.code(400).send({ error: v.message });
     await finalizeSession(ctx.s3, v.data.sessionId);

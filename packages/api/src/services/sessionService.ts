@@ -1,18 +1,21 @@
-import { MIN_SESSION_DURATION_MS, MIN_SESSION_EVENT_COUNT } from '@rrkit/shared';
 import { sessionsRepo } from '../db/sessions.repo';
+import { settingsRepo } from '../db/settings.repo';
+import { signalsRepo } from '../db/signals.repo';
 import { S3Service, s3keys } from './s3.service';
 
 /**
  * Finalize a recording session: keep it if it meets the minimum thresholds,
- * otherwise discard it (delete S3 objects + the row).
+ * otherwise discard it (delete S3 objects + the row). Thresholds come from the
+ * admin-configurable session policy.
  */
 export async function finalizeSession(s3: S3Service, id: string): Promise<void> {
   const session = sessionsRepo.get(id);
   if (!session || session.status !== 'recording') return;
 
+  const policy = settingsRepo.getSessionPolicy();
   const keep =
-    session.duration_ms >= MIN_SESSION_DURATION_MS &&
-    session.event_count >= MIN_SESSION_EVENT_COUNT;
+    session.duration_ms >= policy.minDurationMs &&
+    session.event_count >= policy.minEventCount;
 
   if (keep) {
     sessionsRepo.finalize(id, 'completed');
@@ -29,5 +32,6 @@ export async function discardSession(s3: S3Service, id: string): Promise<void> {
       // Best effort — the orphan/retention paths will catch leftovers.
     }
   }
+  signalsRepo.deleteForSession(id);
   sessionsRepo.delete(id);
 }

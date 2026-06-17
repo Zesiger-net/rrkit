@@ -8,5 +8,6 @@
       "@rrkit/shared/constants": ["../shared/src/constants.ts"]
     }
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
 }

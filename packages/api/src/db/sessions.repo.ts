@@ -24,6 +24,8 @@ interface SessionRow {
   url: string | null;
   metadata: string | null;
   problem: string | null;
+  starred: number;
+  note: string | null;
 }
 
 function toSession(row: SessionRow): SessionRecord {
@@ -47,6 +49,8 @@ function toSession(row: SessionRow): SessionRecord {
     url: row.url,
     metadata: row.metadata ? (JSON.parse(row.metadata) as MetadataBag) : null,
     problem: row.problem,
+    starred: row.starred === 1,
+    note: row.note,
   };
 }
 
@@ -163,6 +167,32 @@ export const sessionsRepo = {
 
   delete(id: string): void {
     getDb().prepare('DELETE FROM sessions WHERE id = ?').run(id);
+  },
+
+  /** Update triage fields (star / note). */
+  update(id: string, fields: { starred?: boolean; note?: string }): void {
+    const sets: string[] = [];
+    const params: Record<string, unknown> = { id };
+    if (fields.starred !== undefined) {
+      sets.push('starred = @starred');
+      params.starred = fields.starred ? 1 : 0;
+    }
+    if (fields.note !== undefined) {
+      sets.push('note = @note');
+      params.note = fields.note;
+    }
+    if (sets.length === 0) return;
+    getDb()
+      .prepare(`UPDATE sessions SET ${sets.join(', ')} WHERE id = @id`)
+      .run(params);
+  },
+
+  /** All sessions whose metadata `key` equals `value` (for right-to-erasure). */
+  findByMetadataValue(key: string, value: string): SessionRecord[] {
+    const rows = getDb()
+      .prepare("SELECT * FROM sessions WHERE json_extract(metadata, '$.' || @key) = @value")
+      .all({ key, value }) as SessionRow[];
+    return rows.map(toSession);
   },
 
   /** Sessions whose recording stalled (no update within the cutoff). */

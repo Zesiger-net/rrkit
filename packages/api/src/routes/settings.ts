@@ -4,6 +4,7 @@ import {
   SetupMetadataSchema,
   UpdateCaptureSchema,
   type IntegrationResponse,
+  type LifecycleStatusResponse,
   type MetadataFieldsResponse,
   type S3Config,
   type S3TestResult,
@@ -12,6 +13,7 @@ import type { AppContext } from '../context';
 import { metadataFieldsRepo } from '../db/metadataFields.repo';
 import { settingsRepo } from '../db/settings.repo';
 import { S3Service } from '../services/s3.service';
+import { generateIngestKey } from '../util/ids';
 import { validate } from '../util/validate';
 
 const StorageUpdateSchema = z.object({
@@ -28,19 +30,46 @@ export async function settingsRoutes(app: FastifyInstance, ctx: AppContext): Pro
   await app.register(async (r) => {
     r.addHook('onRequest', r.requireAdmin);
 
-    /* ---- capture (features + privacy + retention) ---- */
+    /* ---- capture (all granular capture-settings groups) ---- */
     r.get('/settings/capture', async () => ({
       features: settingsRepo.getFeatures(),
       privacy: settingsRepo.getPrivacy(),
       retention: settingsRepo.getRetention(),
+      canvas: settingsRepo.getCanvas(),
+      frustration: settingsRepo.getFrustration(),
+      volume: settingsRepo.getVolume(),
+      dom: settingsRepo.getDom(),
+      console: settingsRepo.getConsole(),
+      upload: settingsRepo.getUpload(),
+      network: settingsRepo.getNetwork(),
+      sampling: settingsRepo.getSampling(),
+      sessionPolicy: settingsRepo.getSessionPolicy(),
+      alerts: settingsRepo.getAlerts(),
+      security: settingsRepo.getSecurity(),
     }));
 
     r.put('/settings/capture', async (req, reply) => {
       const v = validate(UpdateCaptureSchema, req.body);
       if (!v.ok) return reply.code(400).send({ error: v.message });
-      settingsRepo.setFeatures(v.data.features);
-      settingsRepo.setPrivacy(v.data.privacy);
-      settingsRepo.setRetention(v.data.retention);
+      const d = v.data;
+      if (d.features) settingsRepo.setFeatures(d.features);
+      if (d.privacy) settingsRepo.setPrivacy(d.privacy);
+      if (d.canvas) settingsRepo.setCanvas(d.canvas);
+      if (d.frustration) settingsRepo.setFrustration(d.frustration);
+      if (d.volume) settingsRepo.setVolume(d.volume);
+      if (d.dom) settingsRepo.setDom(d.dom);
+      if (d.console) settingsRepo.setConsole(d.console);
+      if (d.upload) settingsRepo.setUpload(d.upload);
+      if (d.network) settingsRepo.setNetwork(d.network);
+      if (d.sampling) settingsRepo.setSampling(d.sampling);
+      if (d.sessionPolicy) settingsRepo.setSessionPolicy(d.sessionPolicy);
+      if (d.alerts) settingsRepo.setAlerts(d.alerts);
+      if (d.security) settingsRepo.setSecurity(d.security);
+      if (d.retention) {
+        settingsRepo.setRetention(d.retention);
+        // Keep the bucket's lifecycle expiry rule in sync (best-effort).
+        await ctx.s3.syncRetentionLifecycle(d.retention.days).catch(() => undefined);
+      }
       return { ok: true };
     });
 
@@ -70,7 +99,15 @@ export async function settingsRoutes(app: FastifyInstance, ctx: AppContext): Pro
       if (!result.ok) return reply.code(400).send(result);
       settingsRepo.setS3(cfg);
       ctx.s3.configure(cfg);
+      // Re-apply the retention lifecycle rule on the (possibly new) bucket.
+      await ctx.s3.syncRetentionLifecycle(settingsRepo.getRetention().days).catch(() => undefined);
       return result;
+    });
+
+    /** Bucket lifecycle status (is rrkit's retention expiry rule present?). */
+    r.get('/settings/storage/lifecycle', async (): Promise<LifecycleStatusResponse> => {
+      const status = await ctx.s3.getLifecycleStatus();
+      return status;
     });
 
     /* ---- metadata fields ---- */
@@ -98,6 +135,13 @@ export async function settingsRoutes(app: FastifyInstance, ctx: AppContext): Pro
         instanceUrl,
         scriptUrl: `${instanceUrl}/tracker.js`,
       };
+    });
+
+    /** Rotate the ingest key. Old key stops working immediately. */
+    r.post('/settings/integration/rotate', async () => {
+      const key = generateIngestKey();
+      settingsRepo.setIngest({ key });
+      return { ingestKey: key };
     });
   });
 }

@@ -26,11 +26,21 @@ export interface NetworkEventPayload {
   method: string;
   url: string;
   status: number;
+  statusText?: string;
   startTs: number;
   durationMs: number;
   reqSize?: number;
   resSize?: number;
   error?: boolean;
+  /** Captured (and redacted) request/response headers, when enabled. */
+  reqHeaders?: Record<string, string>;
+  resHeaders?: Record<string, string>;
+  /** Captured (and redacted, truncated) bodies, when enabled. */
+  reqBody?: string;
+  resBody?: string;
+  /** True when a body was cut off at the configured size cap. */
+  reqBodyTruncated?: boolean;
+  resBodyTruncated?: boolean;
 }
 
 /** Payload of a `rrkit/error` custom event. */
@@ -49,4 +59,17 @@ export interface RageEventPayload {
   y: number;
   count: number;
   selector: string;
+}
+
+/** Payload of a `rrkit/deadclick` custom event (click with no effect). */
+export interface DeadClickEventPayload {
+  x: number;
+  y: number;
+  selector: string;
+}
+
+/** Payload of a `rrkit/vital` custom event (a Core Web Vitals sample). */
+export interface WebVitalEventPayload {
+  name: 'LCP' | 'CLS' | 'FCP' | 'TTFB';
+  value: number;
 }

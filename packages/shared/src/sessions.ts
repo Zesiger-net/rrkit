@@ -52,6 +52,28 @@ export interface SessionRecord {
   url: string | null;
   metadata: MetadataBag | null;
   problem: string | null;
+  /** Admin-set: starred/bookmarked for triage. */
+  starred: boolean;
+  /** Admin-set free-text note. */
+  note: string | null;
+}
+
+/** A grouped error issue (many sessions, one fingerprint). */
+export interface IssueRecord {
+  fingerprint: string;
+  message: string;
+  count: number;
+  sessions: number;
+  firstSeen: string;
+  lastSeen: string;
+}
+
+/** Cross-session frustration totals for the dashboard. */
+export interface FrustrationSummary {
+  errors: number;
+  errorIssues: number;
+  rage: number;
+  deadclick: number;
 }
 
 /** Descriptor for one stored event chunk in S3. */

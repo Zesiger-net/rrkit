@@ -1,17 +1,24 @@
 import type { FastifyInstance } from 'fastify';
-import type {
-  ChunkInfo,
-  RrwebEvent,
-  SessionFacetsResponse,
-  SessionListResponse,
-  SessionManifestResponse,
-  SessionStatsResponse,
-  SessionStatus,
+import {
+  EraseByMetadataSchema,
+  UpdateSessionSchema,
+  type ChunkInfo,
+  type EraseResponse,
+  type FrustrationResponse,
+  type IssuesResponse,
+  type RrwebEvent,
+  type SessionFacetsResponse,
+  type SessionListResponse,
+  type SessionManifestResponse,
+  type SessionStatsResponse,
+  type SessionStatus,
 } from '@rrkit/shared';
 import type { AppContext } from '../context';
 import { sessionsRepo, type SessionListFilters } from '../db/sessions.repo';
+import { signalsRepo } from '../db/signals.repo';
 import { discardSession } from '../services/sessionService';
 import { s3keys } from '../services/s3.service';
+import { validate } from '../util/validate';
 
 function parseChunkKey(key: string): { ts: number; seq: number } {
   const m = /chunk-(\d+)-(\d+)\.json$/.exec(key);
@@ -74,6 +81,25 @@ export async function sessionRoutes(app: FastifyInstance, ctx: AppContext): Prom
 
     r.get('/sessions/facets', async (): Promise<SessionFacetsResponse> => sessionsRepo.facets());
 
+    /* ---- errors & frustration (cross-session) ---- */
+    r.get('/sessions/issues', async (): Promise<IssuesResponse> => ({
+      items: signalsRepo.listIssues(100),
+    }));
+
+    r.get(
+      '/sessions/frustration',
+      async (): Promise<FrustrationResponse> => signalsRepo.frustration(),
+    );
+
+    /* ---- right-to-erasure: delete all sessions for a metadata value ---- */
+    r.post('/sessions/erase', async (req, reply): Promise<EraseResponse | void> => {
+      const v = validate(EraseByMetadataSchema, req.body);
+      if (!v.ok) return reply.code(400).send({ error: v.message });
+      const matches = sessionsRepo.findByMetadataValue(v.data.key, v.data.value);
+      for (const s of matches) await discardSession(ctx.s3, s.id);
+      return { deleted: matches.length };
+    });
+
     r.get('/sessions/:id', async (req, reply) => {
       const { id } = req.params as { id: string };
       const session = sessionsRepo.get(id);
@@ -117,6 +143,27 @@ export async function sessionRoutes(app: FastifyInstance, ctx: AppContext): Prom
       return { events };
     });
 
+    r.get('/sessions/:id/export', async (req, reply) => {
+      const { id } = req.params as { id: string };
+      const session = sessionsRepo.get(id);
+      if (!session) return reply.code(404).send({ error: 'Not found' });
+
+      const objects = await ctx.s3.list(s3keys.prefix(id) + 'events/');
+      const ordered = objects
+        .map((o) => ({ ...o, ...parseChunkKey(o.key) }))
+        .sort((a, b) => a.seq - b.seq || a.ts - b.ts);
+      const events: RrwebEvent[] = [];
+      for (const obj of ordered) {
+        const parsed = JSON.parse(await ctx.s3.getString(obj.key)) as RrwebEvent[];
+        if (Array.isArray(parsed)) events.push(...parsed);
+      }
+      events.sort((a, b) => a.timestamp - b.timestamp);
+
+      reply.header('content-type', 'application/json');
+      reply.header('content-disposition', `attachment; filename="${id}.json"`);
+      return { session, events };
+    });
+
     r.get('/sessions/:id/chunk', async (req, reply) => {
       const { id } = req.params as { id: string };
       const key = (req.query as { key?: string }).key;
@@ -126,6 +173,16 @@ export async function sessionRoutes(app: FastifyInstance, ctx: AppContext): Prom
       const raw = await ctx.s3.getString(key);
       reply.header('content-type', 'application/json');
       return reply.send(raw);
+    });
+
+    r.patch('/sessions/:id', async (req, reply) => {
+      const { id } = req.params as { id: string };
+      const session = sessionsRepo.get(id);
+      if (!session) return reply.code(404).send({ error: 'Not found' });
+      const v = validate(UpdateSessionSchema, req.body);
+      if (!v.ok) return reply.code(400).send({ error: v.message });
+      sessionsRepo.update(id, v.data);
+      return sessionsRepo.get(id);
     });
 
     r.delete('/sessions/:id', async (req, reply) => {

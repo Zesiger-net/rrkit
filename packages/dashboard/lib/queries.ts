@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import type {
+  FrustrationSummary,
   IntegrationResponse,
+  IssueRecord,
   MetadataFieldsResponse,
   SessionFacetsResponse,
   SessionListResponse,
@@ -59,5 +61,21 @@ export function useIntegration() {
   return useQuery({
     queryKey: ['integration'],
     queryFn: () => api.get<IntegrationResponse>('/settings/integration'),
+  });
+}
+
+export function useIssues(refetchInterval?: number) {
+  return useQuery({
+    queryKey: ['sessions-issues'],
+    queryFn: () => api.get<{ items: IssueRecord[] }>('/sessions/issues'),
+    refetchInterval,
+  });
+}
+
+export function useFrustration(refetchInterval?: number) {
+  return useQuery({
+    queryKey: ['sessions-frustration'],
+    queryFn: () => api.get<FrustrationSummary>('/sessions/frustration'),
+    refetchInterval,
   });
 }

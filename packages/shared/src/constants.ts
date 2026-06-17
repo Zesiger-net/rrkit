@@ -33,6 +33,8 @@ export const CUSTOM_EVENT_TAGS = {
   network: 'rrkit/network',
   error: 'rrkit/error',
   rage: 'rrkit/rage',
+  deadClick: 'rrkit/deadclick',
+  vital: 'rrkit/vital',
 } as const;
 
 /** CSS class names recognised by the tracker for masking control. */
