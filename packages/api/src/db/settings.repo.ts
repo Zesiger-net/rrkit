@@ -68,7 +68,15 @@ function getRaw<T>(key: SettingKey): T | null {
   const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key) as
     | { value: string }
     | undefined;
-  return row ? (JSON.parse(row.value) as T) : null;
+  if (!row) return null;
+  // A corrupt row (invalid JSON from manual edits / partial writes) is treated
+  // as absent so callers fall back to defaults rather than crashing — this
+  // honours the getGroup() contract and keeps boot (getAuth/getS3) resilient.
+  try {
+    return JSON.parse(row.value) as T;
+  } catch {
+    return null;
+  }
 }
 
 function setRaw(key: SettingKey, value: unknown): void {

@@ -17,13 +17,18 @@ export function verifyPassword(password: string, stored: string): boolean {
   const parts = stored.split('$');
   if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
   const [, n, r, p, saltHex, hashHex] = parts;
-  const salt = Buffer.from(saltHex!, 'hex');
-  const expected = Buffer.from(hashHex!, 'hex');
-  const actual = scryptSync(password, salt, expected.length, {
-    N: Number(n),
-    r: Number(r),
-    p: Number(p),
-    maxmem: MAXMEM,
-  });
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
+  // A corrupt hash (bad params/hex) must fail closed, not throw a 500.
+  const N = Number(n);
+  const R = Number(r);
+  const P = Number(p);
+  if (!Number.isInteger(N) || !Number.isInteger(R) || !Number.isInteger(P)) return false;
+  try {
+    const salt = Buffer.from(saltHex!, 'hex');
+    const expected = Buffer.from(hashHex!, 'hex');
+    if (expected.length === 0) return false;
+    const actual = scryptSync(password, salt, expected.length, { N, r: R, p: P, maxmem: MAXMEM });
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  } catch {
+    return false;
+  }
 }

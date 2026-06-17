@@ -1,4 +1,4 @@
-import { INGEST_KEY_HEADER } from '@rrkit/shared/constants';
+import { INGEST_KEY_HEADER, MAX_BATCH_BYTES } from '@rrkit/shared/constants';
 import type { AnyEvent, Metadata } from '../types';
 
 export interface UploaderOptions {
@@ -6,6 +6,8 @@ export interface UploaderOptions {
   key: string;
   intervalMs: number;
   thresholdBytes: number;
+  /** Hard cap per request; a single flush never sends more than this many bytes. */
+  maxBatchBytes?: number;
   getSessionId: () => string | null;
   /** Called when the server reports the session is gone (404/409). */
   onInvalidSession: () => void;
@@ -53,11 +55,12 @@ export class Uploader {
     if (!sessionId || this.buffer.length === 0) return;
 
     this.sending = true;
-    const events = this.buffer;
+    // Send at most one size-bounded batch; the remainder stays buffered and is
+    // picked up by the next flush. This prevents an in-flight upload's backlog
+    // from being sent as one over-limit request.
+    const events = this.takeBatch();
     const meta = this.pendingMeta;
     const seq = this.seq;
-    this.buffer = [];
-    this.size = 0;
     this.pendingMeta = {};
 
     try {
@@ -75,6 +78,10 @@ export class Uploader {
       });
       if (res.status === 404 || res.status === 409) {
         this.opts.onInvalidSession();
+      } else if (res.status === 413 || res.status === 400) {
+        // Permanent rejection: this batch will never be accepted. Drop the
+        // events (keeping the seq + metadata) so it can't requeue forever.
+        Object.assign(this.pendingMeta, meta);
       } else if (!res.ok) {
         this.requeue(events, meta);
       } else {
@@ -85,6 +92,24 @@ export class Uploader {
     } finally {
       this.sending = false;
     }
+  }
+
+  /** Pull a size-bounded slice off the front of the buffer (≥1 event). */
+  private takeBatch(): AnyEvent[] {
+    const cap = this.opts.maxBatchBytes ?? MAX_BATCH_BYTES;
+    const batch: AnyEvent[] = [];
+    let size = 0;
+    while (this.buffer.length > 0) {
+      const next = this.buffer[0]!;
+      const nextSize = approxSize(next);
+      if (batch.length > 0 && size + nextSize > cap) break;
+      batch.push(next);
+      this.buffer.shift();
+      size += nextSize;
+      this.size -= nextSize;
+    }
+    if (this.buffer.length === 0) this.size = 0;
+    return batch;
   }
 
   /** Synchronous best-effort flush on page hide. */

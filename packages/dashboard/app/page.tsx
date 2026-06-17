@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { FullScreenLoader } from '@/components/loader';
+import { Logo } from '@/components/logo';
 import { useStatus } from '@/lib/queries';
 
 export default function Home() {
@@ -10,11 +10,14 @@ export default function Home() {
   const { data } = useStatus();
 
   useEffect(() => {
-    if (!data) return;
+    if (!data || !data.authed) return;
     if (!data.setupComplete) router.replace('/setup');
-    else if (!data.authed) router.replace('/login');
     else router.replace('/sessions');
   }, [data, router]);
 
-  return <FullScreenLoader />;
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <Logo className="text-6xl" />
+    </div>
+  );
 }

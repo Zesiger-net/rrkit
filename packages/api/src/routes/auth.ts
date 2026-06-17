@@ -17,9 +17,17 @@ function isLocked(ip: string): boolean {
 
 function recordFailure(ip: string): void {
   const now = Date.now();
+  pruneExpiredFailures(now);
   const f = failures.get(ip);
   const count = (f && f.until > now ? f.count : 0) + 1;
   failures.set(ip, { count, until: count >= FAIL_LIMIT ? now + LOCK_MS : now + 60_000 });
+}
+
+/** Evict fully-expired lockout entries so the map can't grow unbounded. */
+function pruneExpiredFailures(now: number): void {
+  for (const [ip, f] of failures) {
+    if (f.until <= now) failures.delete(ip);
+  }
 }
 
 export async function authRoutes(app: FastifyInstance, _ctx: AppContext): Promise<void> {

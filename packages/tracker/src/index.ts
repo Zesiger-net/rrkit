@@ -66,6 +66,7 @@ class Rrkit {
         key: cfg.key,
         intervalMs: cfg.uploadIntervalMs ?? server.upload.uploadIntervalMs,
         thresholdBytes: cfg.flushThresholdBytes ?? server.upload.flushThresholdBytes,
+        maxBatchBytes: server.maxBatchBytes,
         getSessionId: () => this.sessionId,
         onInvalidSession: () => void this.restart(),
       });

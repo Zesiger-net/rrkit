@@ -25,6 +25,31 @@ function parseChunkKey(key: string): { ts: number; seq: number } {
   return { ts: m ? Number(m[1]) : 0, seq: m ? Number(m[2]) : 0 };
 }
 
+/**
+ * Load and time-order every stored event for a session. A single unreadable or
+ * malformed chunk is skipped (best-effort partial replay) rather than failing
+ * the whole request; an S3 listing failure propagates so the caller can 502.
+ */
+async function loadOrderedEvents(ctx: AppContext, id: string): Promise<RrwebEvent[]> {
+  const objects = await ctx.s3.list(s3keys.prefix(id) + 'events/');
+  const ordered = objects
+    .map((o) => ({ ...o, ...parseChunkKey(o.key) }))
+    .sort((a, b) => a.seq - b.seq || a.ts - b.ts);
+
+  const events: RrwebEvent[] = [];
+  for (const obj of ordered) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(await ctx.s3.getString(obj.key));
+    } catch {
+      continue; // skip a corrupt/unreadable chunk rather than 500 the request
+    }
+    if (Array.isArray(parsed)) events.push(...(parsed as RrwebEvent[]));
+  }
+  events.sort((a, b) => a.timestamp - b.timestamp);
+  return events;
+}
+
 function num(v: unknown): number | undefined {
   if (typeof v !== 'string' || v.trim() === '') return undefined;
   const n = Number(v);
@@ -112,15 +137,19 @@ export async function sessionRoutes(app: FastifyInstance, ctx: AppContext): Prom
       const session = sessionsRepo.get(id);
       if (!session) return reply.code(404).send({ error: 'Not found' });
 
-      const objects = await ctx.s3.list(s3keys.prefix(id) + 'events/');
-      const chunks: ChunkInfo[] = objects
-        .map((o) => {
-          const { ts, seq } = parseChunkKey(o.key);
-          return { key: o.key, seq, count: 0, firstTs: ts, lastTs: ts, bytes: o.size };
-        })
-        .sort((a, b) => a.seq - b.seq);
-
-      return { session, chunks };
+      try {
+        const objects = await ctx.s3.list(s3keys.prefix(id) + 'events/');
+        const chunks: ChunkInfo[] = objects
+          .map((o) => {
+            const { ts, seq } = parseChunkKey(o.key);
+            return { key: o.key, seq, count: 0, firstTs: ts, lastTs: ts, bytes: o.size };
+          })
+          .sort((a, b) => a.seq - b.seq);
+        return { session, chunks };
+      } catch (err) {
+        req.log.error({ err, id }, 'failed to list session chunks');
+        return reply.code(502).send({ error: 'Storage error' });
+      }
     });
 
     r.get('/sessions/:id/events', async (req, reply) => {
@@ -128,19 +157,12 @@ export async function sessionRoutes(app: FastifyInstance, ctx: AppContext): Prom
       const session = sessionsRepo.get(id);
       if (!session) return reply.code(404).send({ error: 'Not found' });
 
-      const objects = await ctx.s3.list(s3keys.prefix(id) + 'events/');
-      const ordered = objects
-        .map((o) => ({ ...o, ...parseChunkKey(o.key) }))
-        .sort((a, b) => a.seq - b.seq || a.ts - b.ts);
-
-      const events: RrwebEvent[] = [];
-      for (const obj of ordered) {
-        const raw = await ctx.s3.getString(obj.key);
-        const parsed = JSON.parse(raw) as RrwebEvent[];
-        if (Array.isArray(parsed)) events.push(...parsed);
+      try {
+        return { events: await loadOrderedEvents(ctx, id) };
+      } catch (err) {
+        req.log.error({ err, id }, 'failed to load session events');
+        return reply.code(502).send({ error: 'Storage error' });
       }
-      events.sort((a, b) => a.timestamp - b.timestamp);
-      return { events };
     });
 
     r.get('/sessions/:id/export', async (req, reply) => {
@@ -148,16 +170,13 @@ export async function sessionRoutes(app: FastifyInstance, ctx: AppContext): Prom
       const session = sessionsRepo.get(id);
       if (!session) return reply.code(404).send({ error: 'Not found' });
 
-      const objects = await ctx.s3.list(s3keys.prefix(id) + 'events/');
-      const ordered = objects
-        .map((o) => ({ ...o, ...parseChunkKey(o.key) }))
-        .sort((a, b) => a.seq - b.seq || a.ts - b.ts);
-      const events: RrwebEvent[] = [];
-      for (const obj of ordered) {
-        const parsed = JSON.parse(await ctx.s3.getString(obj.key)) as RrwebEvent[];
-        if (Array.isArray(parsed)) events.push(...parsed);
+      let events: RrwebEvent[];
+      try {
+        events = await loadOrderedEvents(ctx, id);
+      } catch (err) {
+        req.log.error({ err, id }, 'failed to export session events');
+        return reply.code(502).send({ error: 'Storage error' });
       }
-      events.sort((a, b) => a.timestamp - b.timestamp);
 
       reply.header('content-type', 'application/json');
       reply.header('content-disposition', `attachment; filename="${id}.json"`);
@@ -170,9 +189,14 @@ export async function sessionRoutes(app: FastifyInstance, ctx: AppContext): Prom
       if (!key || !key.startsWith(s3keys.prefix(id))) {
         return reply.code(400).send({ error: 'Invalid chunk key' });
       }
-      const raw = await ctx.s3.getString(key);
-      reply.header('content-type', 'application/json');
-      return reply.send(raw);
+      try {
+        const raw = await ctx.s3.getString(key);
+        reply.header('content-type', 'application/json');
+        return reply.send(raw);
+      } catch (err) {
+        req.log.error({ err, key }, 'failed to read session chunk');
+        return reply.code(502).send({ error: 'Storage error' });
+      }
     });
 
     r.patch('/sessions/:id', async (req, reply) => {

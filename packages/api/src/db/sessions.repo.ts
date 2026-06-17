@@ -28,6 +28,16 @@ interface SessionRow {
   note: string | null;
 }
 
+/** Parse the stored metadata JSON, tolerating a corrupt row (→ null). */
+function parseMetadata(raw: string | null): MetadataBag | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as MetadataBag;
+  } catch {
+    return null;
+  }
+}
+
 function toSession(row: SessionRow): SessionRecord {
   return {
     id: row.id,
@@ -47,7 +57,7 @@ function toSession(row: SessionRow): SessionRecord {
     viewport_w: row.viewport_w,
     viewport_h: row.viewport_h,
     url: row.url,
-    metadata: row.metadata ? (JSON.parse(row.metadata) as MetadataBag) : null,
+    metadata: parseMetadata(row.metadata),
     problem: row.problem,
     starred: row.starred === 1,
     note: row.note,
@@ -150,11 +160,15 @@ export const sessionsRepo = {
 
   finalize(id: string, status: SessionStatus, problem?: string | null): void {
     const now = new Date().toISOString();
+    // Duration is measured to the *last activity* (`updated`), not finalize
+    // time — otherwise the stale-finalize job (which runs long after the last
+    // event) would pad the session length with dead idle time.
     getDb()
       .prepare(
         `UPDATE sessions
-           SET status = @status, ended = @now, updated = @now,
-               duration_ms = CAST((julianday(@now) - julianday(created)) * 86400000 AS INTEGER),
+           SET status = @status, ended = @now,
+               duration_ms = CAST((julianday(updated) - julianday(created)) * 86400000 AS INTEGER),
+               updated = @now,
                problem = COALESCE(@problem, problem)
          WHERE id = @id`,
       )

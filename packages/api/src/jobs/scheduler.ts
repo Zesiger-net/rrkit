@@ -60,15 +60,21 @@ export function startJobs(ctx: AppContext, log: FastifyBaseLogger): () => void {
   };
 }
 
+const WEBHOOK_TIMEOUT_MS = 10_000;
+
 async function postWebhook(url: string, text: string): Promise<void> {
-  await fetch(url, {
+  // Bound the request so a slow/hung webhook can't wedge the alerts job (which
+  // is single-flighted by the `alertsRunning` guard) indefinitely.
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ text }),
+    signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS),
   });
+  if (!res.ok) throw new Error(`webhook responded ${res.status}`);
 }
 
-async function runAlerts(log: FastifyBaseLogger): Promise<void> {
+export async function runAlerts(log: FastifyBaseLogger): Promise<void> {
   if (!settingsRepo.getSetup().complete) return;
   const cfg = settingsRepo.getAlerts();
   if (!cfg.enabled || !cfg.webhookUrl) return;
@@ -91,10 +97,12 @@ async function runAlerts(log: FastifyBaseLogger): Promise<void> {
           cfg.webhookUrl,
           `:warning: rrkit error issue (${issue.count}× in the last hour): ${issue.message ?? issue.fingerprint}`,
         );
+        // Only start the cooldown once the notification actually went out, so a
+        // transient webhook failure is retried on the next run.
+        signalsRepo.setAlertState(issue.fingerprint, issue.count);
       } catch (err) {
         log.warn({ err }, 'alert webhook failed');
       }
-      signalsRepo.setAlertState(issue.fingerprint, issue.count);
     } else if (isNew) {
       // Record it so it isn't treated as "new" forever, even when not notified.
       signalsRepo.setAlertState(issue.fingerprint, issue.count);
@@ -107,15 +115,15 @@ async function runAlerts(log: FastifyBaseLogger): Promise<void> {
     if (rage > 0 && cooledDown(state?.last_notified)) {
       try {
         await postWebhook(cfg.webhookUrl, `:rage: ${rage} rage-click cluster(s) in the last hour`);
+        signalsRepo.setAlertState(RAGE_ALERT_KEY, rage);
       } catch (err) {
         log.warn({ err }, 'rage alert webhook failed');
       }
-      signalsRepo.setAlertState(RAGE_ALERT_KEY, rage);
     }
   }
 }
 
-async function runRetention(ctx: AppContext, log: FastifyBaseLogger): Promise<void> {
+export async function runRetention(ctx: AppContext, log: FastifyBaseLogger): Promise<void> {
   if (!settingsRepo.getSetup().complete) return;
   const days = settingsRepo.getRetention().days;
   const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -127,7 +135,7 @@ async function runRetention(ctx: AppContext, log: FastifyBaseLogger): Promise<vo
   log.info({ deleted: old.length, days }, 'retention job removed old sessions');
 }
 
-async function runStaleFinalize(ctx: AppContext, log: FastifyBaseLogger): Promise<void> {
+export async function runStaleFinalize(ctx: AppContext, log: FastifyBaseLogger): Promise<void> {
   if (!settingsRepo.getSetup().complete) return;
   const cutoff = new Date(Date.now() - STALE_CUTOFF_MS).toISOString();
   const stale = sessionsRepo.findStale(cutoff);
