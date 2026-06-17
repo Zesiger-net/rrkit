@@ -15,7 +15,6 @@ export async function statusRoutes(app: FastifyInstance, ctx: AppContext): Promi
     return {
       setupComplete: settingsRepo.getSetup().complete,
       authed,
-      version: ctx.env.version,
     };
   });
 }

@@ -1,6 +1,5 @@
 {
   "name": "rrkit",
-  "version": "0.1.0",
   "private": true,
   "description": "Self-hosted session replay. One container, one mounted SQLite file, your own S3.",
   "engines": {

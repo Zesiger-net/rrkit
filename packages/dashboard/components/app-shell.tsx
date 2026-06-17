@@ -72,7 +72,6 @@ export function AppShell({
           <LogOut className="h-4 w-4" />
           Log out
         </button>
-        <div className="mt-2 px-3 text-xs text-gray-400">v{data.version}</div>
       </aside>
       <main className="flex-1 overflow-x-hidden px-8 py-8">
         <div className="mx-auto max-w-6xl">{children}</div>

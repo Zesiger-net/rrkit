@@ -110,7 +110,6 @@ function testEnv(): Env {
     dbPath: ':memory:',
     staticDir: null,
     trackerPath: null,
-    version: 'test',
   };
 }
 

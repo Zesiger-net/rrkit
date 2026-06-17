@@ -195,7 +195,6 @@ rrkit is zero-config out of the box; these all have sensible defaults. Override 
 | `RRKIT_LOG_LEVEL`    | `info`                 | Log verbosity (`fatal`/`error`/`warn`/`info`/`debug`/`trace`). |
 | `RRKIT_STATIC_DIR`   | *(bundled)*            | Override the dashboard static-export directory. Rarely needed. |
 | `RRKIT_TRACKER_PATH` | *(bundled)*            | Override the `/tracker.js` bundle path. Rarely needed.         |
-| `RRKIT_VERSION`      | build-time value       | Reported version string.                                       |
 
 > There is **no JWT secret to set.** rrkit generates one on first boot and stores it in the database, so dashboard sessions survive restarts with no configuration. See [`.env.example`](.env.example).
 
@@ -280,9 +279,7 @@ Build everything: `pnpm build`.
 
 ## Building & publishing the image
 
-CI (`.github/workflows/ci.yml`) typechecks and builds on every push/PR.
-
-Pushing a tag like `v0.1.0` triggers `.github/workflows/release.yml`, which builds a multi-arch image and pushes it to Docker Hub. Set two repository secrets: `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
+CI (`.github/workflows/ci.yml`) typechecks and builds on every push and PR. On a push to `main` it also builds the multi-arch image and pushes it to Docker Hub as `zesigernet/rrkit:latest` — there are no versioned tags. Set two repository secrets: `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN`.
 
 Build locally:
 

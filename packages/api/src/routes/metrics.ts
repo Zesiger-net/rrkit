@@ -8,7 +8,7 @@ import { settingsRepo } from '../db/settings.repo';
  * Prometheus text-format metrics (aggregate only, no per-session detail).
  * Public so a scraper can reach it; restrict at the reverse proxy if needed.
  */
-export async function metricsRoutes(app: FastifyInstance, ctx: AppContext): Promise<void> {
+export async function metricsRoutes(app: FastifyInstance, _ctx: AppContext): Promise<void> {
   app.get('/metrics', async (_req, reply) => {
     reply.header('content-type', 'text/plain; version=0.0.4');
     if (!settingsRepo.getSetup().complete) return 'rrkit_setup_complete 0\n';
@@ -31,7 +31,6 @@ export async function metricsRoutes(app: FastifyInstance, ctx: AppContext): Prom
       `rrkit_signals{kind="rage"} ${f.rage}`,
       `rrkit_signals{kind="deadclick"} ${f.deadclick}`,
       `rrkit_error_issues ${f.errorIssues}`,
-      `# rrkit version ${ctx.env.version}`,
     ];
     return lines.join('\n') + '\n';
   });

@@ -138,7 +138,6 @@ export const UpdateSessionSchema = z.object({
 export interface StatusResponse {
   setupComplete: boolean;
   authed: boolean;
-  version: string;
 }
 
 export interface SetupStatusResponse {

@@ -9,7 +9,6 @@ export interface Env {
   staticDir: string | null;
   /** Absolute path to the tracker IIFE bundle served at /tracker.js. Null if not built. */
   trackerPath: string | null;
-  version: string;
 }
 
 function firstExisting(...candidates: (string | undefined)[]): string | null {
@@ -36,7 +35,5 @@ export function loadEnv(): Env {
     path.resolve(__dirname, '../../../tracker/dist/tracker.global.js'),
   );
 
-  const version = process.env.RRKIT_VERSION ?? '0.1.0';
-
-  return { port, host, dbPath, staticDir, trackerPath, version };
+  return { port, host, dbPath, staticDir, trackerPath };
 }

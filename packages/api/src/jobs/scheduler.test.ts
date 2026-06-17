@@ -36,7 +36,7 @@ beforeEach(() => {
   );
   s3 = new FakeS3();
   s3.configure({} as never);
-  ctx = { env: { version: 'test' } as AppContext['env'], s3 };
+  ctx = { env: {} as AppContext['env'], s3 };
   settingsRepo.setSetup({ complete: true, passwordSet: true, s3Verified: true, metadataSet: true });
 });
 
