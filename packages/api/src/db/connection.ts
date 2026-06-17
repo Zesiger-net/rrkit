@@ -21,6 +21,6 @@ export function initDb(dbPath: string): Database.Database {
 }
 
 export function getDb(): Database.Database {
-  if (!db) throw new Error('Database not initialised — call initDb() first.');
+  if (!db) throw new Error('Database not initialised; call initDb() first.');
   return db;
 }

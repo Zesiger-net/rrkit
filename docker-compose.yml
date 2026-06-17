@@ -1,7 +1,7 @@
 services:
   rrkit:
     # Use the published image, or build locally by uncommenting `build: .`.
-    image: rrkit/rrkit:latest
+    image: zesigernet/rrkit:latest
     # build: .
     container_name: rrkit
     ports:

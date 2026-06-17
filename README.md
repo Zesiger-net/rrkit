@@ -1,22 +1,22 @@
 # rrkit
 
-Self-hosted **session replay**. Watch real recordings of how people use your site — with console logs, network requests, errors and rage clicks alongside the video. Powered by [rrweb](https://github.com/rrweb-io/rrweb).
+Self-hosted **session replay**. Watch real recordings of how people use your site, with console logs, network requests, errors and rage clicks alongside the video. Powered by [rrweb](https://github.com/rrweb-io/rrweb).
 
-rrkit is **one Docker container**. The only thing it keeps on your host is **a single SQLite file**; every recording lives in **your own S3 bucket**. Everything else — admin password, S3 credentials, what to capture, retention — is configured in the dashboard. No Postgres, no Redis, no Kafka.
+rrkit is **one Docker container**. The only thing it keeps on your host is **a single SQLite file**; every recording lives in **your own S3 bucket**. Everything else (admin password, S3 credentials, what to capture, retention) is configured in the dashboard. No Postgres, no Redis, no Kafka.
 
 ---
 
 ## Requirements
 
 - **Docker** (with Docker Compose).
-- **An S3-compatible bucket** — AWS S3, Cloudflare R2, Backblaze B2, MinIO, Contabo, … (or use the bundled MinIO to evaluate).
-- **For production: a domain and a reverse proxy that terminates HTTPS.** rrkit serves plain HTTP and is not TLS-aware on its own — see [Running in production](#running-in-production-reverse-proxy--https) below. This is required, not optional.
+- **An S3-compatible bucket**: AWS S3, Cloudflare R2, Backblaze B2, MinIO, Contabo, … (or use the bundled MinIO to evaluate).
+- **For production: a domain and a reverse proxy that terminates HTTPS.** rrkit serves plain HTTP and is not TLS-aware on its own. See [Running in production](#running-in-production-reverse-proxy--https) below. This is required, not optional.
 
 ---
 
 ## Try it locally
 
-> This runs rrkit on plain HTTP — fine for evaluating on your own machine, **not** for production. For a real deployment, jump to [Running in production](#running-in-production-reverse-proxy--https).
+> This runs rrkit on plain HTTP, which is fine for evaluating on your own machine but **not** for production. For a real deployment, jump to [Running in production](#running-in-production-reverse-proxy--https).
 
 ```bash
 # 1. Grab the compose file
@@ -31,14 +31,14 @@ open http://localhost:3000
 
 On first launch a short setup wizard guides you through:
 
-1. **Admin password** — protects the dashboard (single admin account).
-2. **S3 bucket** — your bucket's credentials. rrkit verifies them before continuing.
-3. **Session metadata** — the custom fields your app will attach to sessions (e.g. `user_id`, `user_email`, `plan`).
+1. **Admin password**: protects the dashboard (single admin account).
+2. **S3 bucket**: your bucket's credentials. rrkit verifies them before continuing.
+3. **Session metadata**: the custom fields your app will attach to sessions (e.g. `user_id`, `user_email`, `plan`).
 
 That's it. The app is live.
 
 > Don't have a bucket handy? Use the dev stack with a bundled MinIO:
-> `docker compose -f docker-compose.dev.yml up --build` — see the file for the credentials to paste into the wizard.
+> `docker compose -f docker-compose.dev.yml up --build`. See the file for the credentials to paste into the wizard.
 
 ---
 
@@ -50,9 +50,9 @@ That's it. The app is live.
 2. **Security.** Without TLS the admin password and every recording travel in cleartext. The dashboard login cookie is also flagged `Secure` only over HTTPS, so it should not be used unencrypted in production.
 3. **Certificates + a stable hostname** are what the tracker snippet points at (`host: "https://your-rrkit-host"`).
 
-rrkit already runs with `trustProxy` enabled and sets the auth cookie with `secure: 'auto'` — it marks the cookie `Secure` based on the scheme it sees. So your proxy **must forward `X-Forwarded-Proto`** to match the scheme the browser actually uses (HTTPS); otherwise the cookie's `Secure` flag and the recorded client IPs will be wrong. (This is also why the local-HTTP quick start above works without a proxy: rrkit sees plain HTTP and omits the `Secure` flag.)
+rrkit already runs with `trustProxy` enabled and sets the auth cookie with `secure: 'auto'`, so it marks the cookie `Secure` based on the scheme it sees. So your proxy **must forward `X-Forwarded-Proto`** to match the scheme the browser actually uses (HTTPS); otherwise the cookie's `Secure` flag and the recorded client IPs will be wrong. (This is also why the local-HTTP quick start above works without a proxy: rrkit sees plain HTTP and omits the `Secure` flag.)
 
-### Caddy (recommended — automatic HTTPS)
+### Caddy (recommended, automatic HTTPS)
 
 Caddy obtains and renews Let's Encrypt certificates for you. `Caddyfile`:
 
@@ -77,7 +77,7 @@ server {
     ssl_certificate     /etc/letsencrypt/live/rrkit.example.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/rrkit.example.com/privkey.pem;
 
-    # Ingest batches can be several MB — must exceed rrkit's 8 MB batch limit.
+    # Ingest batches can be several MB, so this must exceed rrkit's 8 MB batch limit.
     client_max_body_size 10m;
 
     location / {
@@ -92,9 +92,9 @@ server {
 
 ### Proxy checklist
 
-- **Forward `X-Forwarded-Proto`** — without it the secure cookie is never set and login fails.
-- **Raise the max request body size to ~10 MB** — rrkit accepts ingest batches up to 8 MB; the default proxy limit (often 1 MB) will reject them with `413`.
-- **Generous read timeouts** — large initial DOM snapshots can take a moment to upload.
+- **Forward `X-Forwarded-Proto`**: without it the secure cookie is never set and login fails.
+- **Raise the max request body size to ~10 MB**: rrkit accepts ingest batches up to 8 MB; the default proxy limit (often 1 MB) will reject them with `413`.
+- **Generous read timeouts**: large initial DOM snapshots can take a moment to upload.
 - **CORS is already handled.** The dashboard is same-origin with the API, and the tracker's cross-origin requests are allowed by rrkit. You don't configure CORS in the proxy.
 
 ### Content Security Policy on the recorded site
@@ -150,15 +150,15 @@ The first session shows up in the dashboard within a few seconds of someone visi
 
 ## Capture & privacy
 
-Under **Settings → Capture** you control — in depth — what every tracker records (the tracker reads this on load). The common toggles are front and centre; an **Advanced** area exposes the fine-grained knobs:
+Under **Settings → Capture** you control, in depth, what every tracker records (the tracker reads this on load). The common toggles are front and centre; an **Advanced** area exposes the fine-grained knobs:
 
-- **Console logs** — choose levels, truncation length, optional stack traces
-- **Network requests** — URL/status/timing always; optionally **headers and bodies** (off by default) with URL allow/deny, size caps, content-type allowlist, and header/field **redaction that happens in the browser**
-- **Canvas / WebGL** — frame rate, image quality and format
-- **Errors, rage & dead clicks** — JS exceptions, configurable rage-click thresholds, and dead-click detection
-- **Web Vitals** — LCP / CLS / FCP / TTFB (opt-in)
-- **Volume / DOM** — mouse-move/scroll/input sampling, slim-DOM, inline images, full-snapshot interval, and more
-- **Sampling rules** — record a percentage of sessions, or restrict by URL
+- **Console logs**: choose levels, truncation length, optional stack traces
+- **Network requests**: URL/status/timing always; optionally **headers and bodies** (off by default) with URL allow/deny, size caps, content-type allowlist, and header/field **redaction that happens in the browser**
+- **Canvas / WebGL**: frame rate, image quality and format
+- **Errors, rage & dead clicks**: JS exceptions, configurable rage-click thresholds, and dead-click detection
+- **Web Vitals**: LCP / CLS / FCP / TTFB (opt-in)
+- **Volume / DOM**: mouse-move/scroll/input sampling, slim-DOM, inline images, full-snapshot interval, and more
+- **Sampling rules**: record a percentage of sessions, or restrict by URL
 
 **Inputs are masked by default.** Text typed into inputs is hidden in recordings. Beyond the classes below you can configure mask/block/ignore **CSS selectors** and a built-in **PII scrubber** in Settings → Capture:
 
@@ -178,17 +178,17 @@ See [ROADMAP.md](ROADMAP.md) for the full feature list and what's still planned.
 
 Everything is in the dashboard:
 
-- **Storage** — any S3-compatible provider: AWS S3, Cloudflare R2, Backblaze B2, MinIO, Contabo, … Set a custom **endpoint** and enable **path-style** for non-AWS providers. Credentials are stored server-side and never sent to the browser.
-- **Retention** — auto-delete sessions (DB rows + S3 objects) older than N days (default 30). rrkit also writes a matching **S3 lifecycle expiry rule** to your bucket so objects expire at the source; the Storage tab shows whether it's in sync.
-- **Metadata fields** — define/rename the fields your SDK attaches; mark fields **filterable** to search by them in the sessions list.
-- **Issues & frustration** — JS errors are grouped into issues across sessions, alongside rage- and dead-click counts (see the **Issues** tab). Optionally send **webhook/Slack alerts** on error spikes, new issues, or rage clusters.
-- **Monitoring** — a Prometheus-compatible `/api/metrics` endpoint exposes aggregate session/issue counts (restrict it at your reverse proxy if needed).
+- **Storage**: any S3-compatible provider: AWS S3, Cloudflare R2, Backblaze B2, MinIO, Contabo, … Set a custom **endpoint** and enable **path-style** for non-AWS providers. Credentials are stored server-side and never sent to the browser.
+- **Retention**: auto-delete sessions (DB rows + S3 objects) older than N days (default 30). rrkit also writes a matching **S3 lifecycle expiry rule** to your bucket so objects expire at the source; the Storage tab shows whether it's in sync.
+- **Metadata fields**: define/rename the fields your SDK attaches; mark fields **filterable** to search by them in the sessions list.
+- **Issues & frustration**: JS errors are grouped into issues across sessions, alongside rage- and dead-click counts (see the **Issues** tab). Optionally send **webhook/Slack alerts** on error spikes, new issues, or rage clusters.
+- **Monitoring**: a Prometheus-compatible `/api/metrics` endpoint exposes aggregate session/issue counts (restrict it at your reverse proxy if needed).
 
 ---
 
 ## Environment variables
 
-rrkit is zero-config out of the box — these all have sensible defaults. Override them in the compose file's `environment:` block if needed.
+rrkit is zero-config out of the box; these all have sensible defaults. Override them in the compose file's `environment:` block if needed.
 
 | Variable             | Default                | Purpose                                                        |
 | -------------------- | ---------------------- | -------------------------------------------------------------- |
@@ -207,7 +207,7 @@ rrkit is zero-config out of the box — these all have sensible defaults. Overri
 ## Backups
 
 - **Metadata + settings:** the single file `./data/rrkit.db` (copy it while the container is stopped, or use SQLite's online backup).
-- **Recordings:** live in your S3 bucket — back it up with your provider's tooling.
+- **Recordings:** live in your S3 bucket; back it up with your provider's tooling.
 
 ## Updating
 
@@ -253,7 +253,7 @@ Customer site ──(rrweb batches, ingest key)──►  ┌──────�
 
 ## Roadmap
 
-rrkit's direction — granular capture controls, network body capture with redaction, retention that syncs to S3 lifecycle rules, privacy/consent tooling, and more — is tracked in [ROADMAP.md](ROADMAP.md). Contributions and ideas welcome.
+rrkit's direction (granular capture controls, network body capture with redaction, retention that syncs to S3 lifecycle rules, privacy/consent tooling, and more) is tracked in [ROADMAP.md](ROADMAP.md). Contributions and ideas welcome.
 
 ---
 

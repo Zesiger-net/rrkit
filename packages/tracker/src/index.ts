@@ -39,7 +39,7 @@ class Rrkit {
       const cfg = this.config;
       const server = await fetchConfig(cfg.host, cfg.key);
       if (!server) {
-        warn('invalid ingest key or server unreachable — not recording');
+        warn('invalid ingest key or server unreachable; not recording');
         return;
       }
 
@@ -56,7 +56,7 @@ class Rrkit {
 
       const sessionId = await this.ensureSession(cfg.host);
       if (!sessionId) {
-        warn('could not start a session — not recording');
+        warn('could not start a session; not recording');
         return;
       }
       this.sessionId = sessionId;

@@ -3,7 +3,7 @@ import type { WebVitalEventPayload } from '@rrkit/shared';
 import { emitCustomEvent } from '../core/recorder';
 
 /**
- * Capture Core Web Vitals with the native PerformanceObserver — no web-vitals
+ * Capture Core Web Vitals with the native PerformanceObserver and no web-vitals
  * dependency. LCP/CLS are finalized on page hide; FCP/TTFB are read directly.
  */
 export function installVitals(): () => void {
@@ -21,7 +21,7 @@ export function installVitals(): () => void {
       obs.observe({ type, buffered: true } as PerformanceObserverInit);
       observers.push(obs);
     } catch {
-      /* unsupported entry type — skip */
+      /* unsupported entry type; skip */
     }
   };
 

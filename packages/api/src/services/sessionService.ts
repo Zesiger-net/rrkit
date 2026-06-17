@@ -29,7 +29,7 @@ export async function discardSession(s3: S3Service, id: string): Promise<void> {
     try {
       await s3.deletePrefix(s3keys.prefix(id));
     } catch {
-      // Best effort — the orphan/retention paths will catch leftovers.
+      // Best effort; the orphan/retention paths will catch leftovers.
     }
   }
   signalsRepo.deleteForSession(id);

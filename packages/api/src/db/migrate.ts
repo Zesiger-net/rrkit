@@ -19,7 +19,7 @@ export function runMigrations(db: Database.Database): void {
  * column `mf_<key>` extracting its value from the JSON `metadata` column. This
  * makes `WHERE mf_<key> = ?` indexed without rewriting existing rows.
  *
- * Safe to run on every boot — it only adds what is missing.
+ * Safe to run on every boot; it only adds what is missing.
  */
 export function reconcileMetadataColumns(db: Database.Database): void {
   // `table_xinfo` (not `table_info`) is required here: `table_info` omits

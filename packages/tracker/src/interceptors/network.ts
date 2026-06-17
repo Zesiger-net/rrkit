@@ -40,7 +40,7 @@ function parseRawHeaders(raw: string): Record<string, string> {
 function bodyToString(body: unknown): string | undefined {
   if (typeof body === 'string') return body;
   if (body instanceof URLSearchParams) return body.toString();
-  return undefined; // skip Blob/FormData/ArrayBuffer — opaque/binary
+  return undefined; // skip Blob/FormData/ArrayBuffer (opaque/binary)
 }
 
 export function installNetwork(settings: NetworkSettings): () => void {
@@ -103,7 +103,7 @@ export function installNetwork(settings: NetworkSettings): () => void {
             resBodyVal = prep.value;
             resBodyTrunc = prep.truncated;
           } catch {
-            /* body not readable — skip */
+            /* body not readable; skip */
           }
         }
         emit({

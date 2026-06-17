@@ -5,7 +5,7 @@
  */
 
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
-// 13–19 digit runs (optionally separated by spaces/dashes) — card-like numbers.
+// 13–19 digit runs (optionally separated by spaces/dashes), matching card-like numbers.
 const CARD_RE = /\b(?:\d[ -]?){13,19}\b/g;
 const SSN_RE = /\b\d{3}-\d{2}-\d{4}\b/g;
 

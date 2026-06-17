@@ -161,7 +161,7 @@ export const sessionsRepo = {
   finalize(id: string, status: SessionStatus, problem?: string | null): void {
     const now = new Date().toISOString();
     // Duration is measured to the *last activity* (`updated`), not finalize
-    // time — otherwise the stale-finalize job (which runs long after the last
+    // time; otherwise the stale-finalize job (which runs long after the last
     // event) would pad the session length with dead idle time.
     getDb()
       .prepare(
@@ -319,7 +319,7 @@ function buildWhere(filters: SessionListFilters): {
     params.search = `%${filters.search}%`;
   }
 
-  // Custom metadata filters — only against existing, filterable, validated columns.
+  // Custom metadata filters: only against existing, filterable, validated columns.
   if (filters.mf) {
     const filterable = new Set(metadataFieldsRepo.filterableKeys());
     for (const [key, value] of Object.entries(filters.mf)) {

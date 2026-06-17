@@ -5,7 +5,7 @@ export interface UAInfo {
 }
 
 /**
- * Minimal user-agent parser — enough to label sessions by browser/OS/device.
+ * Minimal user-agent parser, enough to label sessions by browser/OS/device.
  * Avoids a heavy dependency; covers the common cases.
  */
 export function parseUA(ua: string | undefined): UAInfo {

@@ -257,11 +257,11 @@ function SessionsList({ onOpen }: { onOpen: (id: string) => void }) {
                       <div className="text-xs text-gray-400">{formatRelative(s.created)}</div>
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {(s.metadata?.user_id as string | undefined) ?? '—'}
+                      {(s.metadata?.user_id as string | undefined) ?? 'N/A'}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {s.ua_browser ?? '—'}
-                      <span className="text-gray-400"> · {s.ua_os ?? '—'}</span>
+                      {s.ua_browser ?? 'N/A'}
+                      <span className="text-gray-400"> · {s.ua_os ?? 'N/A'}</span>
                     </td>
                     <td className="px-4 py-3 text-gray-600">{formatDuration(s.duration_ms)}</td>
                     <td className="px-4 py-3 text-gray-600">{s.event_count}</td>
@@ -310,7 +310,7 @@ function StatCard({ label, value, color = 'gray' }: { label: string; value?: num
         <span className={cn('h-2 w-2 rounded-full', dot[color])} />
         {label}
       </div>
-      <div className="mt-2 text-2xl font-semibold">{value ?? '—'}</div>
+      <div className="mt-2 text-2xl font-semibold">{value ?? 'N/A'}</div>
     </Card>
   );
 }
@@ -501,18 +501,18 @@ function SessionDetail({ id, onBack }: { id: string; onBack: () => void }) {
               <Detail label="Started" value={formatDateTime(s.created)} />
               <Detail label="Duration" value={formatDuration(s.duration_ms)} />
               <Detail label="Events" value={String(s.event_count)} />
-              <Detail label="Browser" value={s.ua_browser ?? '—'} />
-              <Detail label="OS" value={s.ua_os ?? '—'} />
-              <Detail label="Device" value={s.ua_device ?? '—'} />
+              <Detail label="Browser" value={s.ua_browser ?? 'N/A'} />
+              <Detail label="OS" value={s.ua_os ?? 'N/A'} />
+              <Detail label="Device" value={s.ua_device ?? 'N/A'} />
               <Detail
                 label="Screen"
-                value={s.screen_w ? `${s.screen_w}×${s.screen_h}` : '—'}
+                value={s.screen_w ? `${s.screen_w}×${s.screen_h}` : 'N/A'}
               />
               <Detail
                 label="Viewport"
-                value={s.viewport_w ? `${s.viewport_w}×${s.viewport_h}` : '—'}
+                value={s.viewport_w ? `${s.viewport_w}×${s.viewport_h}` : 'N/A'}
               />
-              <Detail label="IP" value={s.ip ?? '—'} />
+              <Detail label="IP" value={s.ip ?? 'N/A'} />
               {s.url && <Detail label="URL" value={<span className="break-all">{s.url}</span>} />}
               {s.metadata &&
                 Object.entries(s.metadata).map(([k, v]) => (
@@ -608,7 +608,7 @@ function ConsolePanel({ items, onSeek }: { items: CustomItem[]; onSeek: (o: numb
 }
 
 function formatBytes(bytes?: number): string {
-  if (bytes == null) return '—';
+  if (bytes == null) return 'N/A';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;

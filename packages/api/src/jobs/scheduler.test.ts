@@ -114,7 +114,7 @@ test('runStaleFinalize discards an idle session that fails the keep policy', asy
 
 test('runStaleFinalize leaves fresh recording sessions alone', async () => {
   settingsRepo.setSessionPolicy({ minDurationMs: 0, minEventCount: 0 });
-  makeSession('rrk_s_fresh', 30_000, 1_000); // updated 1s ago — not stale
+  makeSession('rrk_s_fresh', 30_000, 1_000); // updated 1s ago, not stale
   await runStaleFinalize(ctx, log);
   assert.equal(sessionsRepo.get('rrk_s_fresh')?.status, 'recording');
 });

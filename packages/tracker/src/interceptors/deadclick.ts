@@ -10,7 +10,7 @@ export interface DeadClickOptions {
 
 /**
  * Detect "dead clicks": a click on a non-interactive-looking spot that produces
- * no DOM change, scroll, or navigation within the window — a strong signal the
+ * no DOM change, scroll, or navigation within the window, a strong signal the
  * user expected something to happen and nothing did.
  */
 export function installDeadClick(opts: DeadClickOptions): () => void {

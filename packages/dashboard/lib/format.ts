@@ -24,7 +24,7 @@ export function formatRelative(iso: string): string {
 }
 
 export function formatDateTime(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return 'N/A';
   return new Date(iso).toLocaleString();
 }
 

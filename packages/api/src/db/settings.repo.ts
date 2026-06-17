@@ -70,7 +70,7 @@ function getRaw<T>(key: SettingKey): T | null {
     | undefined;
   if (!row) return null;
   // A corrupt row (invalid JSON from manual edits / partial writes) is treated
-  // as absent so callers fall back to defaults rather than crashing — this
+  // as absent so callers fall back to defaults rather than crashing; this
   // honours the getGroup() contract and keeps boot (getAuth/getS3) resilient.
   try {
     return JSON.parse(row.value) as T;

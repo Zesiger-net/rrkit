@@ -20,7 +20,7 @@ function custom(tag: string, payload: unknown, timestamp = 1000): RrwebEvent {
 
 test('extractSignals pulls errors, rage and dead clicks; ignores other events', () => {
   const events: RrwebEvent[] = [
-    { type: 2, data: {}, timestamp: 1 } as RrwebEvent, // full snapshot — ignored
+    { type: 2, data: {}, timestamp: 1 } as RrwebEvent, // full snapshot, ignored
     custom(CUSTOM_EVENT_TAGS.error, { kind: 'error', message: 'Boom', stack: 'Error\n  at x (a.js:1:1)' }),
     custom(CUSTOM_EVENT_TAGS.rage, { x: 1, y: 2, count: 4, selector: 'button.buy' }),
     custom(CUSTOM_EVENT_TAGS.deadClick, { x: 3, y: 4, selector: 'div.hero' }),

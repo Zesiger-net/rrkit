@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Logo wordmark font — self-hosted so the app stays offline-capable. */
+/* Logo wordmark font, self-hosted so the app stays offline-capable. */
 @font-face {
   font-family: 'Bitcount Prop Single';
   font-style: normal;

@@ -613,7 +613,7 @@ function CapturePanel() {
       {/* Advanced groups */}
       <PanelCard
         title="Advanced capture"
-        description="Deep recording knobs. Defaults are sensible — tune only if you know you need to."
+        description="Deep recording knobs. Defaults are sensible; tune only if you know you need to."
       >
         <div className="space-y-3">
           <Collapsible title="Canvas" description="Snapshot rate and image encoding for <canvas> recording.">

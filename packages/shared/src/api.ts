@@ -167,9 +167,9 @@ export interface TrackerConfigResponse {
   sampling: SamplingSettings;
   metadataKeys: string[];
   maxBatchBytes: number;
-  /** @deprecated use `upload.uploadIntervalMs` — kept for older trackers. */
+  /** @deprecated use `upload.uploadIntervalMs`; kept for older trackers. */
   uploadIntervalMs: number;
-  /** @deprecated use `upload.flushThresholdBytes` — kept for older trackers. */
+  /** @deprecated use `upload.flushThresholdBytes`; kept for older trackers. */
   flushThresholdBytes: number;
 }
 

@@ -682,7 +682,7 @@ test('filtering by a custom filterable metadata field (mf_ generated column)', a
   settingsRepo.setSessionPolicy({ minDurationMs: 0, minEventCount: 0 });
   const cookie = await loginCookie(t.app, 'admin-password-123');
 
-  // Declare a filterable "plan" field — this adds the indexed mf_plan column.
+  // Declare a filterable "plan" field; this adds the indexed mf_plan column.
   const declare = await t.app.inject({
     method: 'PUT',
     url: '/api/settings/metadata',

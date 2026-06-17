@@ -5,7 +5,7 @@ import { signalsRepo } from '../db/signals.repo';
 import { settingsRepo } from '../db/settings.repo';
 
 /**
- * Prometheus text-format metrics (aggregate only — no per-session detail).
+ * Prometheus text-format metrics (aggregate only, no per-session detail).
  * Public so a scraper can reach it; restrict at the reverse proxy if needed.
  */
 export async function metricsRoutes(app: FastifyInstance, ctx: AppContext): Promise<void> {

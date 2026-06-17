@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /* ================================================================== *
- * Feature toggles — the master on/off switches for each capture area.
+ * Feature toggles: the master on/off switches for each capture area.
  * `rage` and `deadClick` are split out from `errors` so they can be
  * controlled independently (dead clicks are opt-in to avoid noise).
  * ================================================================== */
@@ -21,7 +21,7 @@ export type Features = z.infer<typeof FeaturesSchema>;
 export const DEFAULT_FEATURES: Features = FeaturesSchema.parse({});
 
 /* ================================================================== *
- * Privacy & masking — from a single toggle to granular, selector-based
+ * Privacy & masking: from a single toggle to granular, selector-based
  * control plus an optional regex PII scrubber.
  * ================================================================== */
 export const PrivacySchema = z.object({
@@ -50,7 +50,7 @@ export type Privacy = z.infer<typeof PrivacySchema>;
 export const DEFAULT_PRIVACY: Privacy = PrivacySchema.parse({});
 
 /* ================================================================== *
- * Canvas — fps / quality / format (was hardcoded in the recorder).
+ * Canvas: fps / quality / format (was hardcoded in the recorder).
  * ================================================================== */
 export const CanvasFormatSchema = z.enum(['webp', 'jpeg', 'png']);
 export type CanvasFormat = z.infer<typeof CanvasFormatSchema>;
@@ -65,7 +65,7 @@ export type CanvasSettings = z.infer<typeof CanvasSettingsSchema>;
 export const DEFAULT_CANVAS: CanvasSettings = CanvasSettingsSchema.parse({});
 
 /* ================================================================== *
- * Frustration — rage + dead-click thresholds (was hardcoded).
+ * Frustration: rage + dead-click thresholds (was hardcoded).
  * ================================================================== */
 export const FrustrationSettingsSchema = z.object({
   rageThreshold: z.number().int().min(2).max(20).default(3),
@@ -78,7 +78,7 @@ export type FrustrationSettings = z.infer<typeof FrustrationSettingsSchema>;
 export const DEFAULT_FRUSTRATION: FrustrationSettings = FrustrationSettingsSchema.parse({});
 
 /* ================================================================== *
- * Volume / sampling — throttle high-frequency events. Maps to rrweb
+ * Volume / sampling: throttle high-frequency events. Maps to rrweb
  * `sampling`. Numbers are throttle windows in ms (0 = capture all).
  * ================================================================== */
 export const VolumeSettingsSchema = z.object({
@@ -142,7 +142,7 @@ export type UploadSettings = z.infer<typeof UploadSettingsSchema>;
 export const DEFAULT_UPLOAD: UploadSettings = UploadSettingsSchema.parse({});
 
 /* ================================================================== *
- * Network capture — headers/bodies are OFF by default with full controls.
+ * Network capture: headers/bodies are OFF by default with full controls.
  * ================================================================== */
 export const NetworkSettingsSchema = z.object({
   recordHeaders: z.boolean().default(false),

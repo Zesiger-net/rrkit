@@ -16,7 +16,7 @@ export function anonymizeIp(ip: string): string {
 
 /**
  * Keep the first three IPv6 groups (~/48) and zero the rest. `::` is expanded
- * first so suffix bits are never mistaken for prefix bits — e.g.
+ * first so suffix bits are never mistaken for prefix bits, e.g.
  * `2001:db8::1` → `2001:db8:0::`, not `2001:db8:1::`.
  */
 function anonymizeIpv6(ip: string): string {
@@ -27,12 +27,12 @@ function anonymizeIpv6(ip: string): string {
     const headParts = head ? head.split(':') : [];
     const tailParts = tail ? tail.split(':') : [];
     const missing = 8 - headParts.length - tailParts.length;
-    if (missing < 0) return ip; // malformed — leave untouched
+    if (missing < 0) return ip; // malformed; leave untouched
     groups = [...headParts, ...Array(missing).fill('0'), ...tailParts];
   } else {
     groups = addr.split(':');
   }
-  if (groups.length !== 8) return ip; // not a clean address — don't guess
+  if (groups.length !== 8) return ip; // not a clean address; don't guess
   return `${groups.slice(0, 3).join(':')}::`;
 }
 

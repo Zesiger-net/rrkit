@@ -143,7 +143,7 @@ export class S3Service {
       );
       return res.Rules ?? [];
     } catch (err) {
-      // No lifecycle config yet is not an error — return an empty rule set.
+      // No lifecycle config yet is not an error; return an empty rule set.
       const code = (err as { name?: string; Code?: string }).name ?? (err as { Code?: string }).Code;
       if (code === 'NoSuchLifecycleConfiguration') return [];
       throw err;

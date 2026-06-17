@@ -143,7 +143,7 @@ export class Uploader {
       const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
       navigator.sendBeacon(url, blob);
     } catch {
-      /* ignore — best effort */
+      /* ignore; best effort */
     }
   }
 

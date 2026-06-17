@@ -14,7 +14,7 @@ export function storeSid(id: string): void {
   try {
     sessionStorage.setItem(SID_KEY, id);
   } catch {
-    /* sessionStorage unavailable (private mode) — record without persistence */
+    /* sessionStorage unavailable (private mode); record without persistence */
   }
 }
 
