@@ -1,0 +1,21 @@
+{
+  "name": "rrkit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Self-hosted session replay. One container, one mounted SQLite file, your own S3.",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build:shared": "pnpm --filter @rrkit/shared build",
+    "build:tracker": "pnpm --filter @rrkit/tracker build",
+    "build:dashboard": "pnpm --filter @rrkit/dashboard build",
+    "build:api": "pnpm --filter @rrkit/api build",
+    "build": "pnpm build:shared && pnpm build:tracker && pnpm build:dashboard && pnpm build:api",
+    "dev:api": "pnpm --filter @rrkit/api dev",
+    "dev:dashboard": "pnpm --filter @rrkit/dashboard dev",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint"
+  }
+}

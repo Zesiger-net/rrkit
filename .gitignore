@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.next/
+out/
+data/
+*.log
+.DS_Store
+.env
+.env.local
+coverage/
+.turbo/
+packages/*/dist/
+packages/dashboard/out/
+packages/dashboard/.next/

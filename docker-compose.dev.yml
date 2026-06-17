@@ -1,0 +1,47 @@
+# Local development stack: builds rrkit from source and runs a MinIO S3 server
+# you can point the setup wizard at.
+#
+#   docker compose -f docker-compose.dev.yml up --build
+#
+# Then open http://localhost:3000 and, in the S3 step, use:
+#   Endpoint:        http://minio:9000
+#   Region:          us-east-1
+#   Bucket:          rrkit
+#   Access key:      rrkitadmin
+#   Secret key:      rrkitadmin
+#   Force path-style: ON
+services:
+  rrkit:
+    build: .
+    container_name: rrkit
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    depends_on:
+      - minio
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: rrkitadmin
+      MINIO_ROOT_PASSWORD: rrkitadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - ./minio-data:/data
+
+  # Creates the "rrkit" bucket on startup.
+  createbucket:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc alias set local http://minio:9000 rrkitadmin rrkitadmin) do sleep 1; done;
+      /usr/bin/mc mb -p local/rrkit;
+      exit 0;
+      "
