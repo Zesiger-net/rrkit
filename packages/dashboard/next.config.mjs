@@ -12,7 +12,7 @@ const nextConfig = {
   ...(isDev
     ? {
         async rewrites() {
-          const target = process.env.RRKIT_API_ORIGIN ?? 'http://localhost:3000';
+          const target = process.env.RRKIT_API_ORIGIN ?? 'http://localhost:3002';
           return [
             { source: '/api/:path*', destination: `${target}/api/:path*` },
             { source: '/tracker.js', destination: `${target}/tracker.js` },

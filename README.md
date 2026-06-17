@@ -261,7 +261,8 @@ Requires Node 22 and pnpm 9.
 pnpm install
 pnpm build:shared            # build the shared contracts first
 
-# run the API (port 3000) and the dashboard (port 3001, proxies /api → 3000)
+# run the API (port 3002) and the dashboard (port 3001, proxies /api → 3002)
+# port 3000 is intentionally left free for other dev apps
 pnpm dev:api
 pnpm dev:dashboard
 ```
