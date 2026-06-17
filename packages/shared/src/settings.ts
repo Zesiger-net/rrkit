@@ -43,8 +43,6 @@ export const PrivacySchema = z.object({
   anonymizeIp: z.boolean().default(false),
   /** Honour navigator.doNotTrack / Global Privacy Control. */
   respectDnt: z.boolean().default(false),
-  /** Require an explicit rrkit.optIn() before recording starts. */
-  requireConsent: z.boolean().default(false),
 });
 export type Privacy = z.infer<typeof PrivacySchema>;
 export const DEFAULT_PRIVACY: Privacy = PrivacySchema.parse({});

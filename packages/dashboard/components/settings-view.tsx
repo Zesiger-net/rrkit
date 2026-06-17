@@ -544,12 +544,6 @@ function CapturePanel() {
             checked={privacy.respectDnt}
             onChange={(v) => setP({ respectDnt: v })}
           />
-          <ToggleRow
-            label="Require consent"
-            hint="Require an explicit rrkit.optIn() before recording starts."
-            checked={privacy.requireConsent}
-            onChange={(v) => setP({ requireConsent: v })}
-          />
 
           <Collapsible title="Selectors & masked input types" description="Fine-grained, selector-based privacy controls.">
             <div className="space-y-4">

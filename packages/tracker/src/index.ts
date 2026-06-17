@@ -12,7 +12,6 @@ import { installRage } from './interceptors/rage';
 import { installVitals } from './interceptors/vitals';
 import type { Metadata, RrkitConfig } from './types';
 
-const CONSENT_KEY = 'rrkit_consent';
 const SAMPLE_KEY = 'rrkit_sample';
 
 class Rrkit {
@@ -43,9 +42,8 @@ class Rrkit {
         return;
       }
 
-      // ---- consent / privacy / sampling gates ----
+      // ---- privacy / sampling gates ----
       if (dntBlocked(server.privacy.respectDnt)) return;
-      if (server.privacy.requireConsent && !consentGranted()) return; // resumes via optIn()
       if (urlRuleBlocked(server.sampling.urlAllowlist, server.sampling.urlBlocklist)) return;
       if (sampledOut(server.sampling.sessionSampleRate)) return;
 
@@ -115,27 +113,6 @@ class Rrkit {
   setMetadata(fields: Record<string, MetadataValue>): void {
     Object.assign(this.metadata, fields);
     this.uploader?.setMetadata(fields);
-  }
-
-  /** Grant consent and (re)start recording. Persists across page loads. */
-  optIn(): void {
-    try {
-      localStorage.setItem(CONSENT_KEY, '1');
-    } catch {
-      /* ignore */
-    }
-    void this.start();
-  }
-
-  /** Revoke consent: stop recording and forget the current session. */
-  optOut(): void {
-    try {
-      localStorage.removeItem(CONSENT_KEY);
-    } catch {
-      /* ignore */
-    }
-    this.stop();
-    clearSid();
   }
 
   stop(): void {
@@ -215,14 +192,6 @@ class Rrkit {
 }
 
 /* ---- module-level gate helpers ---- */
-
-function consentGranted(): boolean {
-  try {
-    return localStorage.getItem(CONSENT_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
 
 function dntBlocked(respect: boolean): boolean {
   if (!respect) return false;

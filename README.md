@@ -165,7 +165,7 @@ Under **Settings → Capture** you control, in depth, what every tracker records
 | `rrkit-mask`    | Force-mask an element's text             |
 | `rrkit-block`   | Don't record the element at all          |
 
-**Privacy & consent.** Settings include honoring Do-Not-Track / Global Privacy Control, a consent gate (`rrkit.optIn()` / `rrkit.optOut()`), and dropping or anonymizing stored IPs. For GDPR erasure, Settings → Privacy can delete every session for a given user.
+**Privacy.** Settings include honoring Do-Not-Track / Global Privacy Control and dropping or anonymizing stored IPs. For GDPR erasure, Settings → Privacy can delete every session for a given user.
 
 See [ROADMAP.md](ROADMAP.md) for the full feature list and what's still planned.
 
@@ -249,7 +249,7 @@ Customer site ──(rrweb batches, ingest key)──►  ┌──────�
 
 ## Roadmap
 
-rrkit's direction (granular capture controls, network body capture with redaction, retention that syncs to S3 lifecycle rules, privacy/consent tooling, and more) is tracked in [ROADMAP.md](ROADMAP.md). Contributions and ideas welcome.
+rrkit's direction (granular capture controls, network body capture with redaction, retention that syncs to S3 lifecycle rules, privacy tooling, and more) is tracked in [ROADMAP.md](ROADMAP.md). Contributions and ideas welcome.
 
 ---
 
