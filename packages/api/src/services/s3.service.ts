@@ -22,10 +22,17 @@ export interface S3Object {
   size: number;
 }
 
+/** The UI stores endpoints without a protocol; the SDK needs a full URL. */
+function normalizeEndpoint(endpoint: string): string | undefined {
+  const trimmed = endpoint.trim();
+  if (!trimmed) return undefined;
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
 function buildClient(cfg: S3Config): S3Client {
   return new S3Client({
     region: cfg.region || 'us-east-1',
-    endpoint: cfg.endpoint ? cfg.endpoint : undefined,
+    endpoint: normalizeEndpoint(cfg.endpoint),
     forcePathStyle: cfg.forcePathStyle,
     credentials: { accessKeyId: cfg.accessKeyId, secretAccessKey: cfg.secretAccessKey },
   });

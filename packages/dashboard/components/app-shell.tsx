@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { useStatus } from '@/lib/queries';
 import { FullScreenLoader } from './loader';
+import { Logo } from './logo';
 
 export function AppShell({ active, children }: { active: 'sessions' | 'settings'; children: ReactNode }) {
   const router = useRouter();
@@ -36,11 +37,8 @@ export function AppShell({ active, children }: { active: 'sessions' | 'settings'
   return (
     <div className="flex min-h-screen">
       <aside className="flex w-56 shrink-0 flex-col border-r border-[var(--border)] bg-white px-3 py-4">
-        <div className="mb-6 flex items-center gap-2 px-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-brand text-sm font-bold text-brand-fg">
-            r
-          </div>
-          <span className="text-base font-semibold">rrkit</span>
+        <div className="mb-6 flex items-center px-2">
+          <Logo className="text-2xl" />
         </div>
         <nav className="flex-1 space-y-1">
           {nav.map((item) => {

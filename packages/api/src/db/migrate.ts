@@ -22,8 +22,11 @@ export function runMigrations(db: Database.Database): void {
  * Safe to run on every boot — it only adds what is missing.
  */
 export function reconcileMetadataColumns(db: Database.Database): void {
+  // `table_xinfo` (not `table_info`) is required here: `table_info` omits
+  // VIRTUAL generated columns, so the `mf_*` columns we add below would be
+  // invisible and re-added on the next run, failing with "duplicate column".
   const existing = new Set(
-    (db.pragma('table_info(sessions)') as Array<{ name: string }>).map((c) => c.name),
+    (db.pragma('table_xinfo(sessions)') as Array<{ name: string }>).map((c) => c.name),
   );
 
   const fields = db

@@ -7,6 +7,7 @@ import { api, ApiError } from '@/lib/api';
 import { useStatus } from '@/lib/queries';
 import { Button, Card, Field, Input } from '@/components/ui';
 import { FullScreenLoader } from '@/components/loader';
+import { Logo } from '@/components/logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,9 +43,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <Card className="w-full max-w-sm p-8">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-brand text-lg font-bold text-brand-fg">
-            r
-          </div>
+          <Logo className="mb-3 block text-4xl" />
           <h1 className="text-lg font-semibold">Welcome back</h1>
           <p className="mt-1 text-sm text-gray-500">Enter your admin password to continue.</p>
         </div>

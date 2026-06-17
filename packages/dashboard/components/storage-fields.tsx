@@ -39,8 +39,9 @@ export function StorageFields({
       >
         <Input
           value={value.endpoint}
-          onChange={(e) => set({ endpoint: e.target.value })}
-          placeholder="https://s3.example.com"
+          // Strip any leading protocol so the field always holds a bare host.
+          onChange={(e) => set({ endpoint: e.target.value.replace(/^\s*https?:\/\//i, '') })}
+          placeholder="s3.example.com"
         />
       </Field>
       <Field label="Region">

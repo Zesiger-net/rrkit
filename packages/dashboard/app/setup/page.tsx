@@ -11,6 +11,7 @@ import { Button, Card, Field, Input } from '@/components/ui';
 import { FullScreenLoader } from '@/components/loader';
 import { StorageFields, emptyStorage, type StorageValue } from '@/components/storage-fields';
 import { MetadataEditor } from '@/components/metadata-editor';
+import { Logo } from '@/components/logo';
 
 type Step = 'password' | 'storage' | 'metadata';
 const STEPS: { key: Step; label: string; icon: typeof KeyRound }[] = [
@@ -106,16 +107,11 @@ export default function SetupPage() {
   const activeIndex = STEPS.findIndex((s) => s.key === step);
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10">
+    <div className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
+      <Logo className="mb-8 text-4xl" />
       <div className="grid w-full max-w-3xl gap-6 md:grid-cols-[200px_1fr]">
         {/* progress rail */}
         <div className="hidden md:block">
-          <div className="mb-6 flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-base font-bold text-brand-fg">
-              r
-            </div>
-            <span className="text-lg font-semibold">rrkit</span>
-          </div>
           <ol className="space-y-1">
             {STEPS.map((s, i) => {
               const Icon = s.icon;

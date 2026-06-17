@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Logo wordmark font — self-hosted so the app stays offline-capable. */
+@font-face {
+  font-family: 'Bitcount Prop Single';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/bitcount-prop-single-latin.woff2') format('woff2');
+}
+
 :root {
   --bg: #f6f7f9;
   --card: #ffffff;
