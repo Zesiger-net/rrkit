@@ -9,6 +9,7 @@ data/
 .env.local
 coverage/
 .turbo/
+*.tsbuildinfo
 packages/*/dist/
 packages/dashboard/out/
 packages/dashboard/.next/

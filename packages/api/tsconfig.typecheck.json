@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": "../..",
+    "paths": {
+      "@rrkit/shared": ["../shared/src/index.ts"],
+      "@rrkit/shared/constants": ["../shared/src/constants.ts"]
+    }
+  },
+  "include": ["src"]
+}
